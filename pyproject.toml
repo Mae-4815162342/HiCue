@@ -17,6 +17,11 @@ classifiers = [
 ]
 license = {text = "CC BY-NC 4.0"}
 license-files = ["LICENSE"]
+dependencies = [
+  "cooler>0.10",
+  "chromosight",
+  "bcbio-gff"
+]
 
 [project.urls]
 Homepage = "https://github.com/Mae-4815162342/HiCue"

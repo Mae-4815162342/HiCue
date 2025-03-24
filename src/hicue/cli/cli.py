@@ -1,25 +1,47 @@
 import click
 
-from hicue import hicue as h
+# from hicue import hicue as h
 
-@click.command()
-@click.argument('filename')
-@click.option("--name", default="World", help="Say hello to NAME.")
-def cli(name, filename):
-    print(filename)
-    """Simple program that greets NAME."""
-    h.say_hello(f"Goodbye, {name}!")
-    h.extract()
+# default_params = {
+#     "windows":[30000],
+#     "detrending":"patch",
+#     "nb_pos":2,
+#     "random_max_dist":100000,
+#     "loops":False,
+#     "min_dist":60000,
+#     "diagonal_mask":0,
+#     "trans_contact":False,
+#     "circular_chromosomes":[],#["chrI"],
+#     "display_strand":True,
+#     "output_formats":['pdf'],
+#     "pileup":True,
+#     "loci":False,
+#     "method":"median",
+#     "flip":True,
+#     "cmap_pileup": [-0.25, 0.25],
+#     "display_sense":"reverse",
+#     "center":"center",
+#     "overlap":"strict",
+#     "separate_by":"",
+#     "separation_regions":"./test_data/TYs.csv",
+#     "contact_separation":"cis_trans",
+#     "contact_range":"20000:200000:30000"
+# }
 
-# from . import (
-#     extract,
-#     tracks
-# )
+from . import (
+    extract,
+    tracks,
+    separate
+)
 
-# __all__ = [
-#     "extract",
-#     "tracks"
-# ]
+@click.group()
+@click.pass_context
+def cli(ctx):
+    pass
+
+cli.add_command(extract.extract)
+cli.add_command(tracks.tracks)
+cli.add_command(separate.separate)
 
 if __name__ == "__main__":
     cli()
