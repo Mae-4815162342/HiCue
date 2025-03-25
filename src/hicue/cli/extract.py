@@ -5,10 +5,12 @@ from .imports import *
 
 from .custom_types import COOL, INT_LIST, STR_LIST, POSITION_FILE
 
+import hicue.hicue as h
+
 @click.command("extract")
-@click.argument("cool_file", type=COOL)
-@click.argument("outpath", type=click.Path(exists=False))
+@click.argument("outpath", type=click.Path(file_okay=False))
 @click.argument('positions', type=POSITION_FILE)
+@click.argument("cool_files", type=COOL)
 @click.option('--gff', type=click.Path(exists=True, dir_okay=False), help="Gff file provided for the position file automatic annotation if the file is a bed2d. The positions considered for pileup are all the genes contained in the bed2d files. For more options, use the hicue annotate command.")
 @click.option('-w', '--windows', type=INT_LIST, default="30000", help="Window size for sub-matrices extraction in bp. Several window sizes can be provided as a comma-separated list. Default value: 30000.")
 @click.option('-d', '--detrending',type=click.Choice(['patch', 'ps', 'none'], case_sensitive=False), default='none', help='Detrending option. Default value: none.')
@@ -35,9 +37,9 @@ from .custom_types import COOL, INT_LIST, STR_LIST, POSITION_FILE
 @click.option('--contact_range', type=(int, int, int), default=["20000", "200000", "30000"], help="Provides MIN MAX STEP in bp as a range for the distance separation on contacts. Overrides the --min_dist option. Default value: (20000,200000,30000).")
 @click.pass_context
 def extract(ctx, 
-            cool_file, 
             outpath,
             positions,
+            cool_files, 
             gff,
             windows, 
             detrending, 
@@ -63,34 +65,59 @@ def extract(ctx,
             contact_separation,
             contact_range
             ):
-    windows = np.array(windows.split(',')).astype(np.int64)
-    circulars = np.array(circulars.split(','))
-    format = np.array(format.split(','))
-    click.echo(click.echo(f"""Extracted {cool_file} {positions} {outpath}
-                            --gff = {gff}
-                            --windows = {windows}
-                            --detrending = {detrending}
-                            --pileup_method = {pileup_method}
-                            --flip = {flip}
-                            --nb_pos = {nb_pos}
-                            --rand_max_dist = {rand_max_dist}
-                            --format = {format}
-                            --circulars = {circulars}
-                            --loops = {loops}
-                            --trans = {trans}
-                            --min-dist = {min_dist}
-                            --diag_mask = {diag_mask}
-                            --pileup = {pileup}
-                            --loci = {loci}
-                            --display_strand = {display_strand}
-                            --cmap_limits = {cmap_limits}
-                            --display_sense = {display_sense}
-                            --center = {center}
-                            --separate_by = {separate_by}
-                            --overlap = {overlap}
-                            --separation_regions = {separation_regions}
-                            --contact_separation = {contact_separation}
-                            --contact_range = {contact_range}
-                            """)
-    )
+        click.echo(f"""Extracting from {cool_files}
+                positions file: {positions}
+                outpath: {outpath}
+                --gff = {gff}
+                --windows = {windows}
+                --detrending = {detrending}
+                --pileup_method = {pileup_method}
+                --flip = {flip}
+                --nb_pos = {nb_pos}
+                --rand_max_dist = {rand_max_dist}
+                --format = {format}
+                --circulars = {circulars}
+                --loops = {loops}
+                --trans = {trans}
+                --min-dist = {min_dist}
+                --diag_mask = {diag_mask}
+                --pileup = {pileup}
+                --loci = {loci}
+                --display_strand = {display_strand}
+                --cmap_limits = {cmap_limits}
+                --display_sense = {display_sense}
+                --center = {center}
+                --separate_by = {separate_by}
+                --overlap = {overlap}
+                --separation_regions = {separation_regions}
+                --contact_separation = {contact_separation}
+                --contact_range = {contact_range}
+        """)
 
+        params = {
+                "windows":windows,
+                "detrending":detrending,
+                "nb_pos":nb_pos,
+                "random_max_dist":rand_max_dist,
+                "loops":loops,
+                "min_dist":min_dist,
+                "diagonal_mask":diag_mask,
+                "trans_contact":trans,
+                "circular_chromosomes":circulars,
+                "display_strand":display_strand,
+                "output_formats":format,
+                "pileup":pileup,
+                "loci":loci,
+                "method":pileup_method,
+                "flip":flip,
+                "cmap_pileup": cmap_limits,
+                "display_sense":display_sense,
+                "center":center,
+                "overlap":overlap,
+                "separate_by":separate_by,
+                "separation_regions":separation_regions,
+                "contact_separation":contact_separation,
+                "contact_range":contact_range
+        }
+
+        h.extract(cool_files, positions, outpath, params)

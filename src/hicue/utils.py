@@ -254,12 +254,11 @@ def sum_up_separate_by(positions_tables, positions, outpath):
                     position["Chromosome"]
                 ]) + "\n")  
 
-def separate_positions(positions, name, separate_by="direct", regions=[], overlap="flex", outpath=""):
+def separate_positions(positions, name, separate_by="direct", separate_regions="", overlap="flex", outpath=""):
     """Separates a table of positions according to the separate_by parameter. Allows several separations simultaneously."""
     positions_tables = {name:positions}
-    separations_parsed = separate_by.replace(" ", "").split(',')
     sum_up = False
-    for separation in separations_parsed:
+    for separation in separate_by:
         positions_tmp = {}
         match separation:                
             case "direct":
@@ -272,6 +271,7 @@ def separate_positions(positions, name, separate_by="direct", regions=[], overla
                 sum_up = True
                     
             case "regions":
+                regions = pd.read_csv(separate_regions)
                 if len(regions) > 0:
                     for pos_name in positions_tables.keys():
                         current_positions = positions_tables[pos_name]
@@ -293,6 +293,8 @@ def separate_positions(positions, name, separate_by="direct", regions=[], overla
             case "cis_trans":
                 positions_tmp = positions_tables
             case "distance":
+                positions_tmp = positions_tables
+            case "None":
                 positions_tmp = positions_tables
             case "":
                 positions_tmp = positions_tables

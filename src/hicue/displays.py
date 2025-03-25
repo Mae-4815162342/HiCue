@@ -27,7 +27,7 @@ def plot_map(ax, matrix, loc1, loc2, window, locus, title="", display_sense="for
     pos1 = min(locus.iloc[loc1]["Start"], locus.iloc[loc1]["End"]) if locus.iloc[loc1]["Strand"] == 1 else max(locus.iloc[loc1]["Start"], locus.iloc[loc1]["End"])
     pos2 = min(locus.iloc[loc2]["Start"], locus.iloc[loc2]["End"]) if locus.iloc[loc2]["Strand"] == 1 else max(locus.iloc[loc2]["Start"], locus.iloc[loc2]["End"])
 
-    name = f"{locus.iloc[loc1]["Name"].replace('/', '_')}" if not is_contact else f"{locus.iloc[loc1]["Name"].replace('/', '_')}-{locus.iloc[loc2]["Name"].replace('/', '_')}"
+    name = f"{locus.iloc[loc1]['Name'].replace('/', '_')}" if not is_contact else f"{locus.iloc[loc1]['Name'].replace('/', '_')}-{locus.iloc[loc2]['Name'].replace('/', '_')}"
     title = name if len(title) == 0 else title
     ax.set_title(title)
 
@@ -67,18 +67,22 @@ def display_submatrices(submatrices, locus, window, outfolder="", output_format=
     for key, matrix in submatrices.items():
         i, j = key
         is_contact = i!=j
-        title = f"Window centered on\n{locus.iloc[i]["Name"]} vs {locus.iloc[j]["Name"]}" if is_contact else f"Window centered on\n{locus.iloc[i]["Name"]}"
-        y_label = f"{locus.iloc[i]["Name"]}" if is_contact else ""
-        x_label = f"{locus.iloc[j]["Name"]}" if is_contact else ""
-        outpath = "" if len(outfolder) == 0 else f"{outfolder}/indiviudal_displays/{locus.iloc[i]["Name"].replace('/', '_')}" if not is_contact else f"{outfolder}/indiviudal_displays/{locus.iloc[i]["Name"].replace('/', '_')}-{locus.iloc[j]["Name"].replace('/', '_')}"
+        title = f"Window centered on\n{locus.iloc[i]['Name']} vs {locus.iloc[j]['Name']}" if is_contact else f"Window centered on\n{locus.iloc[i]['Name']}"
+        y_label = f"{locus.iloc[i]['Name']}" if is_contact else ""
+        x_label = f"{locus.iloc[j]['Name']}" if is_contact else ""
+        outpath = "" if len(outfolder) == 0 else f"{outfolder}/indiviudal_displays/{locus.iloc[i]['Name'].replace('/', '_')}" if not is_contact else f"{outfolder}/indiviudal_displays/{locus.iloc[i]['Name'].replace('/', '_')}-{locus.iloc[j]['Name'].replace('/', '_')}"
         
         plt.figure(figsize=(6,6))
 
         mat = plot_map(plt.gca(), matrix, i, j, window, locus, title=title, circular=circular, chromsizes = chromsizes, display_sense=display_sense, display_strand=display_strand, strand_level=1.2)
 
-        plt.colorbar(mat, fraction=0.01)        
-        plt.xlabel(f"\n{locus.iloc[j]["Chromosome"]} Genomic coordinates (in kb){f"\n{x_label}" if len(x_label) > 0 else ""}")
-        plt.ylabel(f"{f"{y_label}\n" if len(y_label) > 0 else ""}{locus.iloc[i]["Chromosome"]} Genomic coordinates (in kb)")
+        plt.colorbar(mat, fraction=0.01)
+        plot_xlabel =  "\n" + f"{locus.iloc[j]['Chromosome']} Genomic coordinates (in kb)"
+        plot_xlabel += "\n" + x_label if len(x_label) > 0 else ""
+        plt.xlabel(plot_xlabel)
+        plot_ylabel =  f"{locus.iloc[i]['Chromosome']} Genomic coordinates (in kb)"
+        plot_ylabel = y_label + "\n" + plot_ylabel if len(y_label) > 0 else plot_ylabel
+        plt.ylabel(plot_ylabel)
 
         if len(outpath) > 0 :
             for format in output_format:
@@ -135,7 +139,7 @@ def display_all_submatrices(submatrices, locus, window, outfolder="", output_for
             matrix = submatrices[tuple(key)]
             loc1, loc2 = key
             is_contact = loc1 != loc2
-            name = f"{locus.iloc[loc1]["Name"].replace('/', '_')}" if not is_contact else f"{locus.iloc[loc1]["Name"].replace('/', '_')}-{locus.iloc[loc2]["Name"].replace('/', '_')}"
+            name = f"{locus.iloc[loc1]['Name'].replace('/', '_')}" if not is_contact else f"{locus.iloc[loc1]['Name'].replace('/', '_')}-{locus.iloc[loc2]['Name'].replace('/', '_')}"
             title = f"Position {n}" if not is_contact else f"Contact {n}"
             n += 1
             index.append([title, name])

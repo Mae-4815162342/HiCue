@@ -1,15 +1,18 @@
 from .utils import *
 from .displays import *
 
-def extract(mcools, gff, params):
-    # def main(gff, mcools, params, global_outfolder=""):
-    # """display function"""
+def parse_positions():
+    pass
 
-    if len(global_outfolder) > 0 and not os.path.exists(global_outfolder):
-        os.mkdir(global_outfolder)
+def extract(cool_files, positions, outpath, params):
+
+    if not os.path.exists(outpath):
+        os.mkdir(outpath)
 
     # parsing gff file
-    positions_parsed = parse_gff(gff)
+    # TODO: implement bed file 
+    positions_parsed = parse_gff(positions) 
+    data_title = positions.split('/')[-1][:-len(".gff")].replace('/', '_')
     
     # going through the mcools computing loci and pileup displays
     windows = params['windows']
@@ -31,31 +34,28 @@ def extract(mcools, gff, params):
     display_sense = params['display_sense']
     center = params["center"]
     separate_by = params["separate_by"]
-    separate_regions = pd.read_csv(params["separation_regions"])
+    separate_regions = params["separation_regions"]
     overlap = params["overlap"]
     contact_separation = params["contact_separation"]
     contact_range = params["contact_range"]
     ps_detrending = params["detrending"] == "ps"
 
-    data_title = f"{gff_file.split("/")[-1][:-len(".gff")]}".replace('/', '_')
-    selected_positions = separate_positions(positions_parsed, data_title, separate_by=separate_by, regions=separate_regions, overlap=overlap, outpath=global_outfolder)
+    selected_positions = separate_positions(positions_parsed, data_title, separate_by=separate_by, separate_regions=separate_regions, overlap=overlap, outpath=outpath)
     random_locus = []
     for position_name, positions in selected_positions.items():
-        for cool_path in mcools:
+        for cool_path in cool_files:
             cool = cooler.Cooler(cool_path)
             bins = cool.binsize
             if detrending == "patch":
                 random_locus = get_random_from_locus(cool, positions_parsed, nb_pos=nb_pos, max_dist=max_dist) if len(random_locus) == 0 else random_locus
 
-            if len(global_outfolder) > 0:
-                matrix_outfolder = f"{global_outfolder}/{cool.filename.split('/')[-1][:-len(".mcool")]}"
-                if not os.path.exists(matrix_outfolder):
-                    os.mkdir(matrix_outfolder)
+            matrix_outfolder = f"{outpath}/{cool.filename.split('/')[-1].split('.')[0]}"
+            if not os.path.exists(matrix_outfolder):
+                os.mkdir(matrix_outfolder)
 
 
             for window in windows:
-                if len(global_outfolder) > 0:
-                    outfolder = f"{matrix_outfolder}/window_{window//1000}kb"
+                outfolder = f"{matrix_outfolder}/window_{window//1000}kb"
                 if not os.path.exists(outfolder):
                     os.mkdir(outfolder)
 
@@ -120,15 +120,15 @@ def extract(mcools, gff, params):
                                                 pileup_null = np.apply_along_axis(np.nanmean, 0, random_pileup_matrices)
                                         pileup = pileup / pileup_null
                         
-                        title = f"{name.replace("_", " ")} pileup ({len(pileup_matrices)} matrices)"
-                        outpath = f"{outfolder}/{name}_pileup" if len(outfolder) > 0 else ""
+                        title = f"{name.replace('_', ' ')} pileup ({len(pileup_matrices)} matrices)"
+                        pileup_outpath = f"{outfolder}/{name}_pileup" if len(outfolder) > 0 else ""
                         # TODO add display strand True for separated sense of transcription
                         display_strand = False
-                        if len(outpath) > 0:
+                        if len(pileup_outpath) > 0:
                             if not os.path.exists(f"{outfolder}/matrices_tables"):
                                 os.mkdir(f"{outfolder}/matrices_tables")
                             pd.DataFrame(pileup).to_csv(f"{outfolder}/matrices_tables/{name}_pileup.csv")
-                        display_pileup(pileup, window, cmap=cmap, title=title, outpath=outpath, output_format=output_format, display_strand=display_strand, display_sense=display_sense)
+                        display_pileup(pileup, window, cmap=cmap, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=display_strand, display_sense=display_sense)
                 
 
 def tracks():
