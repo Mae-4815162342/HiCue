@@ -1,23 +1,5 @@
 from .cli.imports import *
 
-def parse_gff(in_file):
-    """Parses gff file into python object {(location_start, location_end, location_strand): type, qualifiers)}"""
-    gff = GFF.parse(in_file)
-    gff_df = pd.DataFrame(columns=["Name", "Start", "End", "Strand"])
-    
-    for rec in gff:
-        for feature in rec.features:
-                loc = feature.location
-                gff_tmp = {
-                    "Name": feature.qualifiers['Name'][0] if "Name" in feature.qualifiers else feature.id,
-                    "Chromosome": rec.id,
-                    "Start": loc.start,
-                    "End": loc.end,
-                    "Strand": loc.strand,
-                }
-                gff_df = gff_df._append(gff_tmp, ignore_index=True)
-    return gff_df
-
 def get_random_from_locus(cool, locus, nb_pos=2, max_dist=100000):
     """From locus list, computes a list of nb_pos random locus for each loci"""
     random_loci = pd.DataFrame(columns=locus.columns)
@@ -254,7 +236,7 @@ def sum_up_separate_by(positions_tables, positions, outpath):
                     position["Chromosome"]
                 ]) + "\n")  
 
-def separate_positions(positions, name, separate_by="direct", separate_regions="", overlap="flex", outpath=""):
+def separate_positions(positions, name, separate_by="", separate_regions="", overlap="flex", outpath=""):
     """Separates a table of positions according to the separate_by parameter. Allows several separations simultaneously."""
     positions_tables = {name:positions}
     sum_up = False

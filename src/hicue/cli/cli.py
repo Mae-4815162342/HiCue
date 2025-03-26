@@ -3,8 +3,8 @@ import click
 from . import (
     extract,
     tracks,
-    separate,
-    annotate
+    # separate,
+    # annotate
 )
 
 @click.group()
@@ -14,8 +14,8 @@ def cli(ctx):
 
 cli.add_command(extract.extract)
 cli.add_command(tracks.tracks)
-cli.add_command(separate.separate)
-cli.add_command(annotate.annotate)
+# cli.add_command(separate.separate)
+# cli.add_command(annotate.annotate)
 
 if __name__ == "__main__":
     cli()

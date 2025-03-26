@@ -10,5 +10,6 @@ from itertools import combinations
 import matplotlib.pyplot as plt
 from matplotlib import gridspec as grid
 from chromosight.utils.preprocessing import distance_law
+import pyBigWig
 
 import os

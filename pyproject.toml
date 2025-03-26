@@ -20,7 +20,8 @@ license-files = ["LICENSE"]
 dependencies = [
   "cooler>0.10",
   "chromosight",
-  "bcbio-gff"
+  "bcbio-gff",
+  "pyBigWig"
 ]
 
 [project.urls]

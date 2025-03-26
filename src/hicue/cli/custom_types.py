@@ -2,6 +2,8 @@ import click
 
 from .imports import *
 
+from hicue.parser import *
+
 # accepts a list of cool files or a file containing a list of cool, one per line
 class coolType(click.ParamType):
     name="cool"
@@ -55,15 +57,62 @@ class StrListType(click.ParamType):
             if len(s) == 0:
                 self.fail(f"Empty strings. Comma must separate two distinct values; if a single string is passed, no comma must be found in {param.name}.")
         return strs
-    
+
 class PositionFileType(click.ParamType):
     name="position file"
 
+    #  accepts bed and gff files. Returns a tuple indicating the type and path of the file
     def convert(self, value, param, ctx):
-        return value
-    
+        if not os.path.isfile(value):
+            self.fail(f"{value} is not an existing file.")
+        try:
+            in_handle = open(value)
+            recs = GFF.parse(in_handle)
+            if len(list(recs)) == 0:
+                raise Exception
+            return 'gff', value
+        except:
+            try:
+                bed = parse_bed_file(value)
+                return 'bed', value
+            except Exception as e:
+                self.fail(f"{value} is not an valid position file (gff or bed format) : {e}")
+
+class GffFileType(click.ParamType):
+    name="gff file"
+
+    #  accepts bed and gff files. Returns a tuple indicating the type and path of the file
+    def convert(self, value, param, ctx):
+        if not os.path.isfile(value):
+            self.fail(f"{value} is not an existing file.")
+        try:
+            in_handle = open(value)
+            recs = GFF.parse(in_handle)
+            if len(list(recs)) == 0:
+                raise Exception
+            return value
+        except Exception as e:
+            self.fail(f"{value} is not an valid gff file : {e}")
+
+class TrackFileType(click.ParamType):
+    name="track file"
+
+    #  accepts bw files
+    def convert(self, value, param, ctx):
+        try:
+            bw = pyBigWig.open(value)
+            if bw.isBigWig():
+                return value
+            else:
+                self.fail(f"{value} provided for {param.name} is not in the bigWig format.")
+        except:
+            self.fail(f"{value} provided for {param.name} is not in the bigWig format.")
+
+
 
 COOL = coolType()
 INT_LIST = IntListType()
 STR_LIST = StrListType()
 POSITION_FILE = PositionFileType()
+TRACK_FILE = TrackFileType()
+GFF_FILE = GffFileType()
