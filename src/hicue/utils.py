@@ -133,6 +133,9 @@ def compute_submatrices(cool, name, positions, binning, window, circular=[], loo
             case "none":
                 locus_pairs[name] = tmp_locus_pairs[tmp_locus_pairs_distances >= min_dist]
 
+            case "None":
+                locus_pairs[name] = tmp_locus_pairs[tmp_locus_pairs_distances >= min_dist]
+
             case "":
                 locus_pairs[name] = tmp_locus_pairs[tmp_locus_pairs_distances >= min_dist]
 
