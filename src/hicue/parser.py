@@ -115,22 +115,12 @@ def parse_tracks(tracks, threshold = None, percentage = None, gff=None, default_
     bigwig_file = pyBigWig.open(tracks)
 
     percentage_threshold = None
-    if percentage != None:
-        app_end, quantile = percentage
-        match app_end:
-            case 'high':
-                quantile = 1 - quantile/100
-            case 'low':
-                quantile = quantile/100
-        all_values = np.concatenate([bigwig_file.values(chrom, 0, bigwig_file.chroms(chrom)) for chrom in bigwig_file.chroms().keys()])
-        percentage_threshold = np.nanquantile(all_values, quantile)
-
     if threshold != None:
         min_max, threshold_value = threshold
 
     if gff != None:
-       positions = pd.DataFrame(columns=["Name", "Chromosome", "Start", "End", "Strand", "Track"])
-       for rec in GFF.parse(gff):
+        positions = pd.DataFrame(columns=["Name", "Chromosome", "Start", "End", "Strand", "Track"])
+        for rec in GFF.parse(gff):
             for feature in rec.features:
                     loc = feature.location
                     value = bigwig_file.stats(rec.id, loc.start, loc.end)[0]
@@ -142,13 +132,6 @@ def parse_tracks(tracks, threshold = None, percentage = None, gff=None, default_
                             case 'max':
                                 value = value if value <= threshold_value else None
 
-                    if percentage_threshold != None and value != None:
-                        match app_end:
-                            case 'high':
-                                value = value if value >= percentage_threshold else None
-                            case 'low':
-                                value = value if value <= percentage_threshold else None
-
                     if value != None:
                         pos_tmp = {
                             "Name": feature.qualifiers['Name'][0] if "Name" in feature.qualifiers else feature.id,
@@ -159,7 +142,28 @@ def parse_tracks(tracks, threshold = None, percentage = None, gff=None, default_
                             "Track": value
                         }
                         positions = positions._append(pos_tmp,  ignore_index = True)
+        # as it requires all gff sequences annotations with tracks, percentage is applied after said annotation
+        if percentage != None:
+            app_end, quantile = percentage
+            match app_end:
+                case 'high':
+                    quantile = 1 - quantile/100
+                case 'low':
+                    quantile = quantile/100
+            percentage_threshold = np.nanquantile(list(positions['Track']), quantile)
+            positions = positions[positions['Track'] >= percentage_threshold].reset_index(drop=True)
+
     else:
+        if percentage != None:
+            app_end, quantile = percentage
+            match app_end:
+                case 'high':
+                    quantile = 1 - quantile/100
+                case 'low':
+                    quantile = quantile/100
+            all_values = np.concatenate([bigwig_file.values(chrom, 0, bigwig_file.chroms(chrom)) for chrom in bigwig_file.chroms().keys()])
+            percentage_threshold = np.nanquantile(all_values, quantile)
+
         positions = pd.DataFrame(columns=["Name", "Chromosome", "Start", "End", "Strand", "Track"])
         k = 1
         for chrom in bigwig_file.chroms().keys():

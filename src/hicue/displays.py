@@ -20,7 +20,7 @@ def adjust_extents(ax, chrom1, chrom2, circular=[], chromsizes={}):
             extent_y[i] = str(int(extent_y[i]) - chromsizes[chrom1]//1000) if chrom1 in circular else " "
     ax.set_yticklabels(extent_y)
 
-def plot_map(ax, matrix, loc1, loc2, window, locus, title="", display_sense="forward", circular = [], chromsizes={}, display_strand=False, strand_level=1.2, cmap=None):
+def plot_map(ax, matrix, loc1, loc2, window, locus, title="", display_sense="forward", circular = [], chromsizes={}, display_strand=False, strand_level=1.2, cmap=None, adjust=True, show_title=True):
     """Plots a single matrix on the provided axis"""
     is_contact = loc1 != loc2
     strand = not is_contact and locus.iloc[loc1]["Strand"] == -1
@@ -29,7 +29,8 @@ def plot_map(ax, matrix, loc1, loc2, window, locus, title="", display_sense="for
 
     name = f"{locus.iloc[loc1]['Name'].replace('/', '_')}" if not is_contact else f"{locus.iloc[loc1]['Name'].replace('/', '_')}-{locus.iloc[loc2]['Name'].replace('/', '_')}"
     title = name if len(title) == 0 else title
-    ax.set_title(title)
+    if show_title:
+        ax.set_title(title)
 
     log_matrix = np.log10(matrix)
     vmin = cmap[0] if cmap != None else None
@@ -43,7 +44,8 @@ def plot_map(ax, matrix, loc1, loc2, window, locus, title="", display_sense="for
     
     chrom1 = locus.iloc[loc1]["Chromosome"]
     chrom2 = locus.iloc[loc2]["Chromosome"]
-    adjust_extents(ax, chrom1, chrom2, circular, chromsizes)
+    if adjust:
+        adjust_extents(ax, chrom1, chrom2, circular, chromsizes)
 
     if display_strand:
         match display_sense:
@@ -58,31 +60,88 @@ def plot_map(ax, matrix, loc1, loc2, window, locus, title="", display_sense="for
         ax.text(pos2//1000, pos_up, transcription_sens, horizontalalignment=arrow_alignment, fontsize=20)
     return mat
 
-def display_submatrices(submatrices, locus, window, outfolder="", output_format=['pdf'], circular=[], chromsizes = {}, display_strand=False, display_sense="forward"):
+def display_submatrices(submatrices, locus, window, outfolder="", output_format=['pdf'], circular=[], chromsizes = {}, display_strand=False, display_sense="forward", tracks = None, track_label = ""):
     if len(outfolder) > 0 and not os.path.exists(outfolder):
         os.mkdir(outfolder)
     if len(outfolder) > 0 and not os.path.exists(outfolder + "/indiviudal_displays"):
         os.mkdir(outfolder  + "/indiviudal_displays")
     
-    for key, matrix in submatrices.items():
-        i, j = key
+    for _, row in submatrices.iterrows():
+        i, j, matrix = row["Loc1"], row["Loc2"], row["Matrix"]
         is_contact = i!=j
+        reshape_size = int(np.sqrt(len(matrix)))
+        matrix = matrix.reshape((reshape_size, reshape_size))
         title = f"Window centered on\n{locus.iloc[i]['Name']} vs {locus.iloc[j]['Name']}" if is_contact else f"Window centered on\n{locus.iloc[i]['Name']}"
         y_label = f"{locus.iloc[i]['Name']}" if is_contact else ""
         x_label = f"{locus.iloc[j]['Name']}" if is_contact else ""
         outpath = "" if len(outfolder) == 0 else f"{outfolder}/indiviudal_displays/{locus.iloc[i]['Name'].replace('/', '_')}" if not is_contact else f"{outfolder}/indiviudal_displays/{locus.iloc[i]['Name'].replace('/', '_')}-{locus.iloc[j]['Name'].replace('/', '_')}"
+
+        if tracks == None:
+
+            plt.figure(figsize=(6,6))
+
+            mat = plot_map(plt.gca(), matrix, i, j, window, locus, title=title, circular=circular, chromsizes = chromsizes, display_sense=display_sense, display_strand=display_strand, strand_level=1.2)
+
+            plt.colorbar(mat, fraction=0.01)
+            plot_xlabel =  "\n" + f"{locus.iloc[j]['Chromosome']} Genomic coordinates (in kb)"
+            plot_xlabel += "\n" + x_label if len(x_label) > 0 else ""
+            plt.xlabel(plot_xlabel)
+            plot_ylabel =  f"{locus.iloc[i]['Chromosome']} Genomic coordinates (in kb)"
+            plot_ylabel = y_label + "\n" + plot_ylabel if len(y_label) > 0 else plot_ylabel
+            plt.ylabel(plot_ylabel)
         
-        plt.figure(figsize=(6,6))
+        else:
 
-        mat = plot_map(plt.gca(), matrix, i, j, window, locus, title=title, circular=circular, chromsizes = chromsizes, display_sense=display_sense, display_strand=display_strand, strand_level=1.2)
+            width = 3 if is_contact else 2
+            wspace = 0.4 if is_contact else 0.1
+            hspace = 0.7 if is_contact else 0.5
+            ratios = [6, 1, 0.1] if is_contact else [6, 0.1]
+            figwidth = 8 if is_contact else 6
+            figheight = 7 if is_contact else 8
+            plt.figure(figsize=(figwidth,figheight))
+            gs = grid.GridSpec(5, width, height_ratios = [1,1,1,1,1], width_ratios = ratios, wspace=wspace, hspace=hspace) 
 
-        plt.colorbar(mat, fraction=0.01)
-        plot_xlabel =  "\n" + f"{locus.iloc[j]['Chromosome']} Genomic coordinates (in kb)"
-        plot_xlabel += "\n" + x_label if len(x_label) > 0 else ""
-        plt.xlabel(plot_xlabel)
-        plot_ylabel =  f"{locus.iloc[i]['Chromosome']} Genomic coordinates (in kb)"
-        plot_ylabel = y_label + "\n" + plot_ylabel if len(y_label) > 0 else plot_ylabel
-        plt.ylabel(plot_ylabel)
+            # matrix ax
+            ax = plt.subplot(gs[:4, 0])
+            mat = plot_map(ax, matrix, i, j, window, locus, title=title, show_title=(not is_contact), circular=circular, chromsizes = chromsizes, display_sense=display_sense, display_strand=display_strand, strand_level=1.2, adjust=False)
+
+            # colorbar ax
+            ax_cb = plt.subplot(gs[1, width - 1])
+            plt.colorbar(mat, fraction=0.01, cax=ax_cb)
+            
+            flip_tracks = display_sense == "reverse"
+
+            # first track
+            ax_track1 = plt.subplot(gs[4, 0], sharex=ax)
+            track = tracks[j]
+            xstart, xstop = ax.get_xlim()
+            index1 = [i/len(track) * (xstop - xstart) + xstart for i in range(len(track))]
+            index1 = np.flip(index1) if flip_tracks else index1
+            ax_track1.plot(index1, track)
+            ax_track1.set_ylabel(track_label)
+
+            # second track
+            if is_contact:
+                ax_track2 = plt.subplot(gs[:4, 1],sharey = ax)
+                track = tracks[i]
+                xstart, xstop = ax.get_ylim()
+                index2 = [i/len(track) * (xstop - xstart) + xstart for i in range(len(track))]
+                index2 = index2 if flip_tracks else np.flip(index2)
+                ax_track2.plot(track, index2)
+                ax_track2.yaxis.tick_right()
+                ax_track2.set_xlabel(track_label)
+
+            adjust_extents(ax, locus.iloc[i]["Chromosome"], locus.iloc[j]["Chromosome"], circular, chromsizes)
+
+            plot_xlabel =  "\n" + f"{locus.iloc[j]['Chromosome']} Genomic coordinates (in kb)"
+            plot_xlabel += "\n" + x_label if len(x_label) > 0 else ""
+            ax_track1.set_xlabel(plot_xlabel)
+            plot_ylabel =  f"{locus.iloc[i]['Chromosome']} Genomic coordinates (in kb)"
+            plot_ylabel = y_label + "\n" + plot_ylabel if len(y_label) > 0 else plot_ylabel
+            ax.set_ylabel(plot_ylabel)
+
+            if is_contact:
+                plt.suptitle(title)
 
         if len(outpath) > 0 :
             for format in output_format:
@@ -90,29 +149,88 @@ def display_submatrices(submatrices, locus, window, outfolder="", output_format=
         else:
             plt.show()
 
-def display_pileup(pileup, window, cmap=None, title="", outpath="", output_format=['.pdf'], display_strand=True, display_sense="forward"):
-    plt.figure(figsize=(6,6))
-    plt.title(title)
-    if cmap != None:
+def display_pileup(pileup, window, track_pileup=[], cmap=None, title="", outpath="", output_format=['.pdf'], display_strand=True, display_sense="forward", is_contact = False, track_label="Average Track"):
+    vmin = None if cmap == None else cmap[0]
+    vmax = None if cmap == None else cmap[1]
+    xlabel = "\nGenomic coordinates (in kb)"
+    ylabel = "Genomic coordinates (in kb)"
+    pileup_sense = np.flip(pileup) if display_sense == "reverse" else pileup
+    if len(pileup.shape) < 2:
+        reshape_size = int(np.sqrt(len(pileup)))
+        pileup_sense = pileup_sense.reshape((reshape_size, reshape_size))
+    if len(track_pileup) == 0:
+        plt.figure(figsize=(6,6))
+        plt.title(title)
         match display_sense:
             case "forward":
-                mat = plt.imshow(np.log10(pileup), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap="seismic", vmin=cmap[0], vmax=cmap[1])
+                mat = plt.imshow(np.log10(pileup_sense), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap="seismic", vmin=vmin, vmax=vmax)
             case "reverse":
-                mat = plt.imshow(np.log10(np.flip(pileup)), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap="seismic", vmin=cmap[0], vmax=cmap[1])
-    else:
-        match display_sense:
-            case "forward":
-                mat = plt.imshow(np.log10(pileup), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap="seismic")
-            case "reverse":
-                mat = plt.imshow(np.log10(np.flip(pileup)), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap="seismic")
-    plt.colorbar(mat, fraction=0.01)
-    plt.xlabel("\nGenomic coordinates (in kb)")
-    plt.ylabel("Genomic coordinates (in kb)")
+                mat = plt.imshow(np.log10(pileup_sense), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap="seismic", vmin=vmin, vmax=vmax)
+        plt.colorbar(mat, fraction=0.01)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
 
-    if display_strand:
-        transcription_sens = ARROW_RIGHT
-        arrow_alignment = "left"
-        plt.text(0, -window//1000 * 1.2, transcription_sens, horizontalalignment=arrow_alignment, fontsize=20)
+        if display_strand:
+            transcription_sens = ARROW_LEFT if display_sense == "reverse" else ARROW_RIGHT
+            arrow_alignment = "right" if display_sense == "reverse" else "left"
+            to = -window//1000 * 1.2 if display_sense == "reverse" else window//1000 * 1.2
+            plt.text(0, to, horizontalalignment=arrow_alignment, fontsize=20)
+
+    else:
+        width = 3 if is_contact else 2
+        wspace = 0.4 if is_contact else 0.1
+        hspace = 0.7 if is_contact else 0.5
+        ratios = [6, 1, 0.1] if is_contact else [6, 0.1]
+        figwidth = 8 if is_contact else 6
+        figheight = 7 if is_contact else 8
+        plt.figure(figsize=(figwidth,figheight))
+        gs = grid.GridSpec(5, width, height_ratios = [1,1,1,1,1], width_ratios = ratios, wspace=wspace, hspace=hspace) 
+
+        # matrix ax
+        ax = plt.subplot(gs[:4, 0])
+        match display_sense:
+            case "forward":
+                mat = plt.imshow(np.log10(pileup_sense), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap="seismic", vmin=vmin, vmax=vmax)
+            case "reverse":
+                mat = plt.imshow(np.log10(pileup_sense), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap="seismic", vmin=vmin, vmax=vmax)
+
+        if display_strand:
+            transcription_sens = ARROW_LEFT if display_sense == "reverse" else ARROW_RIGHT
+            arrow_alignment = "right" if display_sense == "reverse" else "left"
+            to = -window//1000 * 1.2 if display_sense == "reverse" else window//1000 * 1.2
+            ax.text(0, to, transcription_sens, horizontalalignment=arrow_alignment, fontsize=20)
+
+        # colorbar ax
+        ax_cb = plt.subplot(gs[1, width - 1])
+        plt.colorbar(mat, fraction=0.01, cax=ax_cb)
+        
+        flip_tracks = display_sense == "reverse"
+
+        # first track
+        ax_track1 = plt.subplot(gs[4, 0], sharex=ax)
+        xstart, xstop = ax.get_xlim()
+        index1 = [i/len(track_pileup) * (xstop - xstart) + xstart for i in range(len(track_pileup))]
+        index1 = np.flip(index1) if flip_tracks else index1
+        ax_track1.plot(index1, track_pileup)
+        ax_track1.set_ylabel(track_label)
+
+        # second track
+        if is_contact:
+            ax_track2 = plt.subplot(gs[:4, 1],sharey = ax)
+            xstart, xstop = ax.get_ylim()
+            index2 = [i/len(track_pileup) * (xstop - xstart) + xstart for i in range(len(track_pileup))]
+            index2 = index2 if flip_tracks else np.flip(index2)
+            ax_track2.plot(track_pileup, index2)
+            ax_track2.yaxis.tick_right()
+            ax_track2.set_xlabel(track_label)
+
+        ax_track1.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+        if is_contact:
+            plt.suptitle(title)
+        else:
+            ax.set_title(title)
 
     if len(outpath) > 0 :
         for format in output_format:
@@ -124,7 +242,11 @@ def display_all_submatrices(submatrices, locus, window, outfolder="", output_for
     if len(outfolder) > 0 and not os.path.exists(outfolder):
         os.mkdir(outfolder)
     
-    keys = np.array(list(submatrices.keys()))
+    indexes = {}
+    for index, row in submatrices.iterrows():
+        i, j = row["Loc1"], row["Loc2"]
+        indexes[(i,j)] = index
+    keys = np.array(list(indexes.keys()))
     # displaying in batches of 64 matrices
     max_value = len(submatrices)//64 if len(submatrices) % 64 == 0 else len(submatrices)//64 + 1
     index = []
@@ -136,7 +258,9 @@ def display_all_submatrices(submatrices, locus, window, outfolder="", output_for
 
         i, j = 0, 0
         for key in current_keys:
-            matrix = submatrices[tuple(key)]
+            matrix = submatrices.iloc[indexes[tuple(key)]]["Matrix"]
+            reshape_size = int(np.sqrt(len(matrix)))
+            matrix = matrix.reshape((reshape_size, reshape_size))
             loc1, loc2 = key
             is_contact = loc1 != loc2
             name = f"{locus.iloc[loc1]['Name'].replace('/', '_')}" if not is_contact else f"{locus.iloc[loc1]['Name'].replace('/', '_')}-{locus.iloc[loc2]['Name'].replace('/', '_')}"

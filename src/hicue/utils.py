@@ -103,6 +103,42 @@ def extract_window(cool, locus1, locus2, binning, window, circular=[], trans=Fal
     
     return submatrix
 
+def compute_subtracks(bw_tracks, positions, window, center = 'start', circular=[]):
+    """Returns a dictionnary with each position's index as key and the corresponding track on the window."""
+    chrom_sizes = bw_tracks.chroms()
+    subtracks = {}
+    for i, locus in positions.iterrows():
+        start = locus["Start"]
+        match center:
+            case "start":
+                start = min(locus["Start"], locus["End"]) if locus["Strand"] == 1 else max(locus["Start"], locus["End"])
+            case "center":
+                start = (locus["Start"] + locus["End"]) // 2
+            case "end":
+                start = max(locus["Start"], locus["End"]) if locus["Strand"] == 1 else min(locus["Start"], locus["End"])
+
+        chromosome = locus["Chromosome"]
+        len_chrom = chrom_sizes[chromosome]
+
+        extracted_track = []
+        if start - window < 0:
+            bellow_start = abs(start - window)
+            extracted_track = np.concatenate([[np.nan] * bellow_start, bw_tracks.values(chromosome, 0, start + window + 1)])
+            if chromosome in circular: 
+                extracted_track[:bellow_start] = bw_tracks.values(chromosome, len_chrom - bellow_start, len_chrom)
+
+        elif start + window + 1 > len_chrom:
+            up_start = start + window + 1 - len_chrom
+            extracted_track = np.concatenate([bw_tracks.values(chromosome, start - window, len_chrom), [np.nan] * up_start])
+            if chromosome in circular:
+                extracted_track[- up_start:] = bw_tracks.values(chromosome, 0, up_start)
+
+        else:
+            extracted_track = np.array(bw_tracks.values(chromosome, start - window, start + window + 1))
+
+        subtracks[i] = extracted_track
+    return subtracks
+
 def get_dist_positions(positions, index1, index2, center="start"):
      
     locus1 = positions.iloc[index1]
@@ -124,7 +160,7 @@ def get_dist_positions(positions, index1, index2, center="start"):
         return np.inf
     
 
-def compute_submatrices(cool, name, positions, binning, window, circular=[], loops = False, min_dist=0, trans_contact=False, diagonal_mask=0, center="start", sort_contact="None", contact_range="20000:100000:30000", ps_detrend = False):
+def compute_submatrices(cool, name, positions, binning, window, circular=[], loops = False, min_dist=0, trans_contact=False, diagonal_mask=0, center="start", sort_contact="None", contact_range="20000:100000:30000", ps_detrend = False, compile = False):
     locus_pairs = {}
     if loops:
         tmp_locus_pairs = np.array(list(combinations(positions.index, r=2)))
@@ -171,14 +207,14 @@ def compute_submatrices(cool, name, positions, binning, window, circular=[], loo
     all_submatrices = {}
     for locus_name in locus_pairs.keys():
 
-        submatrices = {}
+        submatrices = pd.DataFrame(columns=['Loc1', 'Loc2', 'Matrix'])
         for i, j in locus_pairs[locus_name]:
-
             locus1 = positions.iloc[i]
             locus2 = positions.iloc[j]
             if locus1["Chromosome"] != locus2["Chromosome"] and not trans_contact:
                 continue
-            submatrices[(i, j)] = extract_window(cool, locus1, locus2, binning, window, circular = circular, trans = trans_contact, diagonal_mask=diagonal_mask, center=center, detrend_matrix = ps_detrend)
+            submatrix= extract_window(cool, locus1, locus2, binning, window, circular = circular, trans = trans_contact, diagonal_mask=diagonal_mask, center=center, detrend_matrix = ps_detrend)
+            submatrices = submatrices._append({"Loc1":i, "Loc2": j, "Matrix":submatrix.flatten()}, ignore_index=True)
         all_submatrices[locus_name] = submatrices
 
     return all_submatrices
@@ -186,15 +222,15 @@ def compute_submatrices(cool, name, positions, binning, window, circular=[], loo
 def get_windows(matrices, locus, flip, fill=None):
     """Returns windows for pileup flipped if necessary. fill parameter will replace zero and nan values if provided."""
     windows = []
-    for key, matrix in matrices.items():
-        i, j = key
+    for _, row in matrices.iterrows():
+        i, j, matrix = row["Loc1"], row["Loc2"], row["Matrix"]
         if fill != None:
             matrix[np.isnan(matrix)] = fill
             matrix[matrix <= fill] = fill
         if i == j and flip and locus.iloc[i]['Strand'] == -1:
             windows.append(np.flip(matrix))
         else:
-            windows.append(np.flip(matrix))
+            windows.append(matrix)
     return np.array(windows)
 
 def is_in_region(positions, regions, region, overlap="flex"):
