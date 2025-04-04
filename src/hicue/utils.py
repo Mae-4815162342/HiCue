@@ -7,6 +7,7 @@ def get_random_from_locus(cool, locus, nb_pos=2, max_dist=100000):
     for i in locus.index:
         loci = locus.iloc[i]
 
+        # TODO: include circularity in random picking
         min_pos = max(0, loci["Start"] - max_dist)
         max_pos = min(cool.chromsizes[loci["Chromosome"]], loci["End"] + max_dist)
 
@@ -16,6 +17,39 @@ def get_random_from_locus(cool, locus, nb_pos=2, max_dist=100000):
 
             loci["Start"] = random_pos
             loci["End"] = random_pos
+
+            random_loci = random_loci._append(loci, ignore_index = True)
+
+    return random_loci
+
+def get_random_from_locus_2d(cool, locus, nb_pos=2, max_dist=100000):
+    """From 2d locus list, computes a list of nb_pos random pair of locus for each loci pair, maintaining the distance between those."""
+    random_loci = pd.DataFrame(columns=locus.columns)
+
+    for i in locus.index:
+        loci = locus.iloc[i].copy(deep=True)
+
+        min_pos = max(0, loci["Start"] - max_dist)
+        max_pos = min(cool.chromsizes[loci["Chromosome"]], loci["End"] + max_dist)
+
+        for _ in range(nb_pos):
+
+            random_pos = int(np.random.random() * abs(max_pos - min_pos) + min_pos)
+            loci_dist = abs(random_pos - loci["Start"])
+
+            # Two cases: 
+            ## the second location is on the same chromosome, the distance is between the loci physically on the DNA strand;
+            ## the second location is on another chromosome, but it is the same operation, as we try to extract the random matrices on the same diagonal as the original positions in the trans contact matrix.
+            if random_pos <= loci["Start"]:
+                random_pos2 = max(0, loci["Start2"] - loci_dist)
+            else: 
+                random_pos2 = min(cool.chromsizes[loci["Chromosome2"]], loci["Start2"] + loci_dist)
+
+
+            loci["Start"] = random_pos
+            loci["End"] = random_pos
+            loci["Start2"] = random_pos2
+            loci["End2"] = random_pos2
 
             random_loci = random_loci._append(loci, ignore_index = True)
 
@@ -159,12 +193,40 @@ def get_dist_positions(positions, index1, index2, center="start"):
     else:
         return np.inf
     
+def compute_pairs2d(positions):
+    """Separates the 2d lines of a position table into single positions, keeping tab on the pairs indexes. Both the new table and indexation are returned."""
+    tmp_positions = pd.DataFrame(columns=["Name", "Chromosome", "Start", "End", "Strand"])
+    index_pairs = []
+    for i, pos in positions.iterrows():
+        tmp_positions = tmp_positions._append({
+            "Name":pos["Name"],
+            "Chromosome":pos["Chromosome"],
+            "Start":pos["Start"],
+            "End":pos["End"],
+            "Strand":pos["Strand"]
+        }, ignore_index = True)
+        tmp_positions = tmp_positions._append({
+            "Name":pos["Name2"],
+            "Chromosome":pos["Chromosome2"],
+            "Start":pos["Start2"],
+            "End":pos["End2"],
+            "Strand":pos["Strand2"]
+        }, ignore_index = True)
+        index_pairs.append((i * 2, i * 2 + 1))
+    return tmp_positions, index_pairs
 
-def compute_submatrices(cool, name, positions, binning, window, circular=[], loops = False, min_dist=0, trans_contact=False, diagonal_mask=0, center="start", sort_contact="None", contact_range="20000:100000:30000", ps_detrend = False, compile = False):
+def compute_submatrices(cool, name, positions, binning, window, circular=[], loops = False, min_dist=0, trans_contact=False, diagonal_mask=0, center="start", sort_contact="None", contact_range="20000:100000:30000", ps_detrend = False, compile = False, is_2d=False):
     locus_pairs = {}
+    tmp_locus_pairs = []
+    tmp_positions = None
+    # if 2d positions, the pairs are pre-computed
+    if is_2d:
+        tmp_positions, tmp_locus_pairs = compute_pairs2d(positions)
+    else:
+        tmp_positions = positions.copy()
     if loops:
-        tmp_locus_pairs = np.array(list(combinations(positions.index, r=2)))
-        tmp_locus_pairs_distances = np.array([get_dist_positions(positions, i, j, center=center) for i, j in tmp_locus_pairs])
+        tmp_locus_pairs = np.array(list(combinations(tmp_positions.index, r=2))) if not is_2d else tmp_locus_pairs
+        tmp_locus_pairs_distances = np.array([get_dist_positions(tmp_positions, i, j, center=center) for i, j in tmp_locus_pairs])
         match sort_contact:
             case "none":
                 locus_pairs[name] = tmp_locus_pairs[tmp_locus_pairs_distances >= min_dist]
@@ -180,8 +242,8 @@ def compute_submatrices(cool, name, positions, binning, window, circular=[], loo
                 contact_min = int(contact_data[0]) if len(contact_data) == 3 else 0
                 contact_max = int(contact_data[1]) if len(contact_data) == 3 else 0
                 contact_window = int(contact_data[2]) if len(contact_data) == 3 else 0
-                tmp_locus_pairs = np.array(list(combinations(positions.index, r=2)))
-                tmp_locus_pairs_distances = [get_dist_positions(positions, i, j, center=center) for i, j in tmp_locus_pairs]
+                tmp_locus_pairs = np.array(list(combinations(tmp_positions.index, r=2)))
+                tmp_locus_pairs_distances = [get_dist_positions(tmp_positions, i, j, center=center) for i, j in tmp_locus_pairs]
                 for k in range(contact_min, contact_max, contact_window):
                     min_window = k
                     max_window = k + contact_window
@@ -191,26 +253,26 @@ def compute_submatrices(cool, name, positions, binning, window, circular=[], loo
             case "cis_trans":
                 cis_list = []
                 trans_list = []
-                for i in range(len(positions)):
-                    for j in range(i +1, len(positions)):
-                        if get_dist_positions(positions, i, j, center=center) <= min_dist:
+                for i in range(len(tmp_positions)):
+                    for j in range(i +1, len(tmp_positions)):
+                        if get_dist_positions(tmp_positions, i, j, center=center) <= min_dist:
                             continue
-                        if positions.iloc[i]["Chromosome"] == positions.iloc[j]["Chromosome"]:
+                        if tmp_positions.iloc[i]["Chromosome"] == tmp_positions.iloc[j]["Chromosome"]:
                             cis_list.append([i, j])
                         else:
                             trans_list.append([i, j])
                 locus_pairs[f"{name}_cis"] = cis_list
                 locus_pairs[f"{name}_trans"] = trans_list
     else:
-        locus_pairs[name] = list([(i, i) for i in positions.index])
+        locus_pairs[name] = list([(i, i) for i in tmp_positions.index]) if not is_2d else tmp_locus_pairs
 
     all_submatrices = {}
     for locus_name in locus_pairs.keys():
 
         submatrices = pd.DataFrame(columns=['Loc1', 'Loc2', 'Matrix'])
         for i, j in locus_pairs[locus_name]:
-            locus1 = positions.iloc[i]
-            locus2 = positions.iloc[j]
+            locus1 = tmp_positions.iloc[i]
+            locus2 = tmp_positions.iloc[j]
             if locus1["Chromosome"] != locus2["Chromosome"] and not trans_contact:
                 continue
             submatrix= extract_window(cool, locus1, locus2, binning, window, circular = circular, trans = trans_contact, diagonal_mask=diagonal_mask, center=center, detrend_matrix = ps_detrend)
@@ -327,5 +389,75 @@ def separate_positions(positions, name, separate_by="", separate_regions="", ove
     if len(outpath) > 0 and sum_up:
         sum_up_separate_by(positions_tables, positions, outpath) 
     return positions_tables
+
+def separate_positions_2d(positions, name, separate_by="", separate_regions="", overlap="flex", outpath=""):
+    """Separates a table of positions' pairs according to the separate_by parameter. Allows several separations simultaneously."""
+    positions_tables = {name:positions}
+    sum_up = False
+    for separation in separate_by:
+        positions_tmp = {}
+        match separation:                
+            case "direct": # for 2d separation if the strand has been provided, will separate in 4 categories: for/for, for/rev, rev/for, rev/rev
+                for pos_name in positions_tables.keys():
+                    current_positions = positions_tables[pos_name]
+                    forwards = current_positions[current_positions["Strand"] == 1]
+                    reverses = current_positions[current_positions["Strand"] == -1]
+                    positions_tmp[f"{pos_name}_forward"] = forwards
+                    positions_tmp[f"{pos_name}_reverse"] = reverses
+                sum_up = True
+                    
+            case "regions": # will keep pairs in regions if both elements are in the region (with the overlap parameter)
+                regions = pd.read_csv(separate_regions)
+                if len(regions) > 0:
+                    for pos_name in positions_tables.keys():
+                        current_positions = positions_tables[pos_name]
+                        for region in np.unique(regions["Id"]):
+                            positions_tmp[f"{pos_name}_{region}"] = current_positions[is_in_region(current_positions, regions, region, overlap=overlap)]
+                    sum_up = True
+                else:
+                    positions_tmp = positions_tables
+                        
+
+            case "chroms":
+                for pos_name in positions_tables.keys():
+                    current_positions = positions_tables[pos_name]
+                    for chrom in np.unique(current_positions["Chromosome"]):
+                        positions_tmp[f"{pos_name}_{chrom}"] = current_positions[current_positions["Chromosome"] == chrom]
+                sum_up = True
+            
+            # contact functions are implemented in window selection
+            case "cis_trans":
+                positions_tmp = positions_tables
+            case "distance":
+                positions_tmp = positions_tables
+            case "None":
+                positions_tmp = positions_tables
+            case "":
+                positions_tmp = positions_tables
+
+        for name in positions_tmp:
+            positions_tmp[name].index = range(len(positions_tmp[name]))
+        positions_tables = positions_tmp
+
+    if len(outpath) > 0 and sum_up:
+        sum_up_separate_by(positions_tables, positions, outpath) 
+    return positions_tables
+
+def compile_tracks(positions, tracks, flip = False, method="median"):
+    """Compiles tracks according to selected method."""
+    selected_tracks = []
+    for i, pos in positions.iterrows():
+        track = tracks[i]
+        if flip and pos["Strand"] == -1:
+            track = np.flip(track)
+        selected_tracks.append(track)
+    selected_tracks = np.array(selected_tracks)
+    match method:
+        case "median":
+            track_pileup = np.nanmedian(selected_tracks, axis=0)
+        case "mean":
+            track_pileup = np.nanmean(selected_tracks, axis=0)
+
+    return track_pileup
          
         

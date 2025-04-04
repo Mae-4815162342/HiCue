@@ -76,7 +76,20 @@ class PositionFileType(click.ParamType):
                 bed = parse_bed_file(value)
                 return 'bed', value
             except Exception as e:
-                self.fail(f"{value} is not an valid position file (gff or bed format) : {e}")
+                self.fail(f"{value} is not an valid position file (gff or bed format expected) : {e}")
+
+class Position2dFileType(click.ParamType):
+    name="position file"
+
+    #  accepts bed and gff files. Returns a tuple indicating the type and path of the file
+    def convert(self, value, param, ctx):
+        if not os.path.isfile(value):
+            self.fail(f"{value} is not an existing file.")
+        try:
+            parse_bed2d_file(value)
+            return value
+        except Exception as e:
+            self.fail(f"{value} is not an valid 2d position file (bed2d format expected) : {e}")
 
 class GffFileType(click.ParamType):
     name="gff file"
@@ -114,5 +127,6 @@ COOL = coolType()
 INT_LIST = IntListType()
 STR_LIST = StrListType()
 POSITION_FILE = PositionFileType()
+POSITION2D_FILE = Position2dFileType()
 TRACK_FILE = TrackFileType()
 GFF_FILE = GffFileType()

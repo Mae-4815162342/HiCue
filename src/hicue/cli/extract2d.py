@@ -3,13 +3,13 @@ import click
 
 from .imports import *
 
-from .custom_types import COOL, INT_LIST, STR_LIST, POSITION_FILE, GFF_FILE
+from .custom_types import COOL, INT_LIST, STR_LIST, POSITION2D_FILE, GFF_FILE
 
 import hicue.hicue as h
 
 @click.command("extract2d")
 @click.argument("outpath", type=click.Path(file_okay=False))
-@click.argument('positions', type=POSITION_FILE)
+@click.argument('positions', type=POSITION2D_FILE)
 @click.argument("cool_files", type=COOL)
 @click.option('--gff', type=GFF_FILE, help="Gff file provided for the position file automatic annotation if the file is a bed2d. The positions considered for pileup are all the genes contained in the bed2d files. For more options, use the hicue annotate command.")
 @click.option('-w', '--windows', type=INT_LIST, default="30000", help="Window size for sub-matrices extraction in bp. Several window sizes can be provided as a comma-separated list. Default value: 30000.")
