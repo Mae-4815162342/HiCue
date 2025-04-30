@@ -63,16 +63,16 @@ def detrend(matrix):
     matrix = matrix / y[matrix_index]
     return matrix
 
-def extract_window(cool, locus1, locus2, binning, window, circular=[], trans=False, diagonal_mask=0, center="start", detrend_matrix = False):
+def extract_window(cool, locus1, locus2, binning, window, circular=[], trans=False, diagonal_mask=0, center="start", detrend_matrix = False, raw = False):
     """Extracts a window from a matix given positions and parameters."""
     if trans and locus1["Chromosome"]!=locus2["Chromosome"]:
         extent1 = cool.extent(locus1["Chromosome"])
         extent2 = cool.extent(locus2["Chromosome"])
-        matrix = cool.matrix(balance=True)[extent1[0]: extent1[1], extent2[0]:extent2[1]]
+        matrix = cool.matrix(balance=(not raw))[extent1[0]: extent1[1], extent2[0]:extent2[1]]
         if detrend_matrix:
             matrix =matrix / np.nanmean(matrix)
     else:
-        matrix = detrend(cool.matrix(balance=True).fetch(locus1["Chromosome"])) if detrend_matrix else cool.matrix(balance=True).fetch(locus1["Chromosome"])
+        matrix = detrend(cool.matrix(balance=(not raw)).fetch(locus1["Chromosome"])) if detrend_matrix else cool.matrix(balance=(not raw)).fetch(locus1["Chromosome"])
 
     if locus1["Chromosome"] == locus2["Chromosome"]:
         for i in range(diagonal_mask//binning):
@@ -215,7 +215,7 @@ def compute_pairs2d(positions):
         index_pairs.append((i * 2, i * 2 + 1))
     return tmp_positions, index_pairs
 
-def compute_submatrices(cool, name, positions, binning, window, circular=[], loops = False, min_dist=0, trans_contact=False, diagonal_mask=0, center="start", sort_contact="None", contact_range="20000:100000:30000", ps_detrend = False, compile = False, is_2d=False):
+def compute_submatrices(cool, name, positions, binning, window, circular=[], loops = False, min_dist=0, trans_contact=False, diagonal_mask=0, center="start", sort_contact="None", contact_range="20000:100000:30000", ps_detrend = False, compile = False, is_2d=False, raw = False):
     locus_pairs = {}
     tmp_locus_pairs = []
     tmp_positions = None
@@ -275,7 +275,7 @@ def compute_submatrices(cool, name, positions, binning, window, circular=[], loo
             locus2 = tmp_positions.iloc[j]
             if locus1["Chromosome"] != locus2["Chromosome"] and not trans_contact:
                 continue
-            submatrix= extract_window(cool, locus1, locus2, binning, window, circular = circular, trans = trans_contact, diagonal_mask=diagonal_mask, center=center, detrend_matrix = ps_detrend)
+            submatrix= extract_window(cool, locus1, locus2, binning, window, circular = circular, trans = trans_contact, diagonal_mask=diagonal_mask, center=center, detrend_matrix = ps_detrend, raw = raw)
             submatrices = submatrices._append({"Loc1":i, "Loc2": j, "Matrix":submatrix.flatten()}, ignore_index=True)
         all_submatrices[locus_name] = submatrices
 

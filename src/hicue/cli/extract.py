@@ -16,6 +16,7 @@ import hicue.hicue as h
 @click.option('-d', '--detrending',type=click.Choice(['patch', 'ps', 'none'], case_sensitive=False), default='none', help='Detrending option. Default value: none.')
 @click.option('-m', '--pileup_method', type=click.Choice(['median', 'mean'], case_sensitive=False), default='median', help="Aggregation method. If the selected detrending is patch, the method will also be used to aggregate the random sub-matrices. Default value: median.")
 @click.option('-f', '--flip', is_flag=True, help="Enables sub-matrices flipping depending on their sense of transcription in the pileups. Requires the strand annotation of provided positions. If not provided, will consider all position in forward.")
+@click.option('-r', '--raw', is_flag=True, default=False, help="Use the raw matrices in the cool files (sets balance to False). Default value: False")
 @click.option('--nb_pos', type=int, default=2, help="Number of random positions selected for patch detrending. Default value: 2.")
 @click.option('--rand_max_dist', type=int, default="100000", help="Maximum distance in bp between provided positions and the random positions selected for patch detrending. Default value: 100000.")
 @click.option('--format', type=STR_LIST, default="pdf", help="Figures saving formats. Default value: pdf")
@@ -45,6 +46,7 @@ def extract(ctx,
             detrending, 
             pileup_method,
             flip,
+            raw,
             nb_pos,
             rand_max_dist,
             format,
@@ -73,6 +75,7 @@ def extract(ctx,
                 --detrending = {detrending}
                 --pileup_method = {pileup_method}
                 --flip = {flip}
+                --raw = {raw}
                 --nb_pos = {nb_pos}
                 --rand_max_dist = {rand_max_dist}
                 --format = {format}
@@ -101,6 +104,7 @@ def extract(ctx,
                 "nb_pos":nb_pos,
                 "random_max_dist":rand_max_dist,
                 "loops":loops,
+                "raw":raw,
                 "min_dist":min_dist,
                 "diagonal_mask":diag_mask,
                 "trans_contact":trans,

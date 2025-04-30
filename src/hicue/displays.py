@@ -60,11 +60,11 @@ def plot_map(ax, matrix, loc1, loc2, window, locus, title="", display_sense="for
         ax.text(pos2//1000, pos_up, transcription_sens, horizontalalignment=arrow_alignment, fontsize=20)
     return mat
 
-def display_submatrices(submatrices, locus, window, outfolder="", output_format=['pdf'], circular=[], chromsizes = {}, display_strand=False, display_sense="forward", tracks = None, track_label = ""):
+def display_submatrices(submatrices, locus, window, outfolder="", output_format=['pdf'], circular=[], chromsizes = {}, display_strand=False, display_sense="forward", tracks = None, track_label = "", binning=1000):
     if len(outfolder) > 0 and not os.path.exists(outfolder):
         os.mkdir(outfolder)
-    if len(outfolder) > 0 and not os.path.exists(outfolder + "/indiviudal_displays"):
-        os.mkdir(outfolder  + "/indiviudal_displays")
+    if len(outfolder) > 0 and not os.path.exists(outfolder + "/individual_displays"):
+        os.mkdir(outfolder  + "/individual_displays")
     
     for _, row in submatrices.iterrows():
         i, j, matrix = row["Loc1"], row["Loc2"], row["Matrix"]
@@ -74,7 +74,7 @@ def display_submatrices(submatrices, locus, window, outfolder="", output_format=
         title = f"Window centered on\n{locus.iloc[i]['Name']} vs {locus.iloc[j]['Name']}" if is_contact else f"Window centered on\n{locus.iloc[i]['Name']}"
         y_label = f"{locus.iloc[i]['Name']}" if is_contact else ""
         x_label = f"{locus.iloc[j]['Name']}" if is_contact else ""
-        outpath = "" if len(outfolder) == 0 else f"{outfolder}/indiviudal_displays/{locus.iloc[i]['Name'].replace('/', '_')}" if not is_contact else f"{outfolder}/indiviudal_displays/{locus.iloc[i]['Name'].replace('/', '_')}-{locus.iloc[j]['Name'].replace('/', '_')}"
+        outpath = "" if len(outfolder) == 0 else f"{outfolder}/individual_displays/{locus.iloc[i]['Name'].replace('/', '_')}" if not is_contact else f"{outfolder}/individual_displays/{locus.iloc[i]['Name'].replace('/', '_')}-{locus.iloc[j]['Name'].replace('/', '_')}"
 
         if tracks == None:
 
@@ -145,11 +145,11 @@ def display_submatrices(submatrices, locus, window, outfolder="", output_format=
 
         if len(outpath) > 0 :
             for format in output_format:
-                plt.savefig(outpath + f".{format}", bbox_inches="tight")
+                plt.savefig(outpath + f".{binning // 1000}kb.{format}", bbox_inches="tight")
         else:
             plt.show()
 
-def display_pileup(pileup, window, track_pileup=[], cmap=None, title="", outpath="", output_format=['.pdf'], display_strand=True, display_sense="forward", is_contact = False, track_label="Average Track"):
+def display_pileup(pileup, window, track_pileup=[], cmap=None, title="", outpath="", output_format=['.pdf'], display_strand=True, display_sense="forward", is_contact = False, track_label="Average Track", binning=1000):
     vmin = None if cmap == None else cmap[0]
     vmax = None if cmap == None else cmap[1]
     xlabel = "\nGenomic coordinates (in kb)"
@@ -234,11 +234,11 @@ def display_pileup(pileup, window, track_pileup=[], cmap=None, title="", outpath
 
     if len(outpath) > 0 :
         for format in output_format:
-            plt.savefig(outpath + f".{format}", bbox_inches="tight")
+            plt.savefig(outpath + f".{binning // 1000}kb.{format}", bbox_inches="tight")
     else:
         plt.show()
 
-def display_all_submatrices(submatrices, locus, window, outfolder="", output_format=['pdf'], circular=[], chromsizes = [], display_strand=False, display_sense="forward"):
+def display_all_submatrices(submatrices, locus, window, outfolder="", output_format=['pdf'], circular=[], chromsizes = [], display_strand=False, display_sense="forward", binning=1000):
     if len(outfolder) > 0 and not os.path.exists(outfolder):
         os.mkdir(outfolder)
     
@@ -284,10 +284,10 @@ def display_all_submatrices(submatrices, locus, window, outfolder="", output_for
         outpath = outfolder + f"/all_submatrix_batch_{(k + 1)}_out_of_{max_value}"
         if len(outpath) > 0 :
             for format in output_format:
-                plt.savefig(outpath + f".{format}", bbox_inches="tight")
+                plt.savefig(outpath + f".{binning // 1000}kb.{format}", bbox_inches="tight")
         else:
             plt.show()
     
     if len(outpath) > 0 :
-        pd.DataFrame(index, columns=['Reference', 'Name']).to_csv(outfolder + "/all_submatrix_references.csv")
+        pd.DataFrame(index, columns=['Reference', 'Name']).to_csv(outfolder + f"/all_submatrix_references.{binning//1000}kb.csv")
             
