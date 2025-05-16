@@ -149,7 +149,7 @@ def display_submatrices(submatrices, locus, window, outfolder="", output_format=
         else:
             plt.show()
 
-def display_pileup(pileup, window, track_pileup=[], cmap=None, title="", outpath="", output_format=['.pdf'], display_strand=True, display_sense="forward", is_contact = False, track_label="Average Track", binning=1000):
+def display_pileup(pileup, window, track_pileup=[], cmap=None, cmap_color="seismic", title="", outpath="", output_format=['.pdf'], display_strand=True, display_sense="forward", is_contact = False, track_label="Average Track", binning=1000):
     vmin = None if cmap == None else cmap[0]
     vmax = None if cmap == None else cmap[1]
     xlabel = "\nGenomic coordinates (in kb)"
@@ -163,9 +163,9 @@ def display_pileup(pileup, window, track_pileup=[], cmap=None, title="", outpath
         plt.title(title)
         match display_sense:
             case "forward":
-                mat = plt.imshow(np.log10(pileup_sense), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap="seismic", vmin=vmin, vmax=vmax)
+                mat = plt.imshow(np.log10(pileup_sense), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap=cmap_color, vmin=vmin, vmax=vmax)
             case "reverse":
-                mat = plt.imshow(np.log10(pileup_sense), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap="seismic", vmin=vmin, vmax=vmax)
+                mat = plt.imshow(np.log10(pileup_sense), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap=cmap_color, vmin=vmin, vmax=vmax)
         plt.colorbar(mat, fraction=0.01)
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
@@ -190,9 +190,9 @@ def display_pileup(pileup, window, track_pileup=[], cmap=None, title="", outpath
         ax = plt.subplot(gs[:4, 0])
         match display_sense:
             case "forward":
-                mat = plt.imshow(np.log10(pileup_sense), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap="seismic", vmin=vmin, vmax=vmax)
+                mat = plt.imshow(np.log10(pileup_sense), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap=cmap_color, vmin=vmin, vmax=vmax)
             case "reverse":
-                mat = plt.imshow(np.log10(pileup_sense), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap="seismic", vmin=vmin, vmax=vmax)
+                mat = plt.imshow(np.log10(pileup_sense), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap=cmap_color, vmin=vmin, vmax=vmax)
 
         if display_strand:
             transcription_sens = ARROW_LEFT if display_sense == "reverse" else ARROW_RIGHT

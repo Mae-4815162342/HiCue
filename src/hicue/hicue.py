@@ -26,6 +26,7 @@ def extract(cool_files, positions, outpath, params):
     method = params['method']
     flip = params['flip']
     cmap = params['cmap_pileup']
+    cmap_color = params['cmap_color']
     display_sense = params['display_sense']
     center = params["center"]
     separate_by = params["separate_by"]
@@ -140,7 +141,7 @@ def extract(cool_files, positions, outpath, params):
                                 os.mkdir(f"{outfolder}/matrices_tables")
                             size = int(np.sqrt(len(pileup)))
                             pd.DataFrame(pileup.reshape((size, size))).to_csv(f"{outfolder}/matrices_tables/{name}_pileup.csv")
-                        display_pileup(pileup, window, cmap=cmap, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=flip, display_sense=display_sense, binning = bins)
+                        display_pileup(pileup, window, cmap=cmap, cmap_color=cmap_color, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=flip, display_sense=display_sense, binning = bins)
 
 def extract2d(cool_files, positions, outpath, params):
 
@@ -166,6 +167,7 @@ def extract2d(cool_files, positions, outpath, params):
     method = params['method']
     flip = params['flip']
     cmap = params['cmap_pileup']
+    cmap_color = params['cmap_color']
     display_sense = params['display_sense']
     center = params["center"]
     separate_by = params["separate_by"]
@@ -282,7 +284,7 @@ def extract2d(cool_files, positions, outpath, params):
                                 os.mkdir(f"{outfolder}/matrices_tables")
                             size = int(np.sqrt(len(pileup)))
                             pd.DataFrame(pileup.reshape((size, size))).to_csv(f"{outfolder}/matrices_tables/{name}_pileup.csv")
-                        display_pileup(pileup, window, cmap=cmap, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=flip, display_sense=display_sense, binning = bins)
+                        display_pileup(pileup, window, cmap=cmap, cmap_color=cmap_color, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=flip, display_sense=display_sense, binning = bins)
 
 
 def tracks(cool_files, tracks, outpath, params):
@@ -312,6 +314,7 @@ def tracks(cool_files, tracks, outpath, params):
     method = params['method']
     flip = params['flip']
     cmap = params['cmap_pileup']
+    cmap_color = params['cmap_color']
     display_sense = params['display_sense']
     center = params["center"]
     separate_by = params["separate_by"]
@@ -429,14 +432,14 @@ def tracks(cool_files, tracks, outpath, params):
                         if detrending == "patch":
                             track_pileup_null = compile_tracks(random_locus, random_subtracks, method = method, flip = flip)
                             track_pileup = track_pileup /track_pileup_null
-                            track_unit = track_unit + "\n(patch detrended)"
+                            track_unit_title = f"{track_unit}\n(patch detrended)"
                         if detrending == "ps":
                             mean_value = bw_tracks.header()['sumData']/bw_tracks.header()['nBasesCovered']
                             track_pileup = track_pileup / mean_value
-                            track_unit = track_unit + "\n(detrended by global mean)"
+                            track_unit_title = f"{track_unit}\n(detrended by global mean)"
 
                         display_strand_specified = flip and (not loops)
-                        display_pileup(pileup, window, track_pileup=track_pileup, cmap=cmap, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=display_strand_specified, display_sense=display_sense, is_contact=loops, track_label=f"{method}\n{track_unit}", binning = bins)
+                        display_pileup(pileup, window, track_pileup=track_pileup, cmap=cmap, cmap_color=cmap_color, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=display_strand_specified, display_sense=display_sense, is_contact=loops, track_label=f"{method}\n{track_unit_title}", binning = bins)
 
 def annotate(gff, bed):
     pass
