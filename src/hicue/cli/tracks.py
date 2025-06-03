@@ -21,6 +21,7 @@ import hicue.hicue as h
 @click.option('-d', '--detrending',type=click.Choice(['patch', 'ps', 'none'], case_sensitive=False), default='none', help='Detrending option. Default value: none.')
 @click.option('-m', '--pileup_method', type=click.Choice(['median', 'mean'], case_sensitive=False), default='median', help="Aggregation method. If the selected detrending is patch, the method will also be used to aggregate the random sub-matrices. Default value: median.")
 @click.option('-f', '--flip', is_flag=True, help="Enables sub-matrices flipping depending on their sense of transcription in the pileups. Requires the strand annotation of provided positions. If not provided, will consider all position in forward.")
+@click.option('-r', '--raw', is_flag=True, default=False, help="Use the raw matrices in the cool files (sets balance to False). Default value: False")
 @click.option('--nb_pos', type=int, default=2, help="Number of random positions selected for patch detrending. Default value: 2.")
 @click.option('--rand_max_dist', type=int, default="100000", help="Maximum distance in bp between provided positions and the random positions selected for patch detrending. Default value: 100000.")
 @click.option('--format', type=STR_LIST, default="pdf", help="Figures saving formats. Default value: pdf")
@@ -33,10 +34,11 @@ import hicue.hicue as h
 @click.option('--loci/--no-loci', default=False, help="Display single loci as individual figures.")
 @click.option('--display_strand', is_flag=True, help="Display strands on the single matrices and pileup. Requires the strand annotation of provided positions.")
 @click.option('--cmap_limits', type=(float, float), help="Min and Max value for matrix display. Usage: --cmap_limits MIN MAX.")
+@click.option('--cmap_color', type=click.Choice(list(colormaps)), default="seismic", help="Colormap used for pileup. Must be a valid matplotlib colormap. Default: seismic")
 @click.option('--display_sense', type=click.Choice(['forward', 'reverse'], case_sensitive=False), default='forward', help="Sense of display. In 'forward' mode, the matrices are represented with the forward sense going from left to right, and from right to left in 'reverse' mode.")
 @click.option('--center', type=click.Choice(['start', 'center', 'end'], case_sensitive=False), default='start', help="Defines the positional parameter of each position chosen as the window center. 'start' for the start site, 'end' for the end site, and 'center' for the average between those last two.")
-# @click.option('--separate_by', type=STR_LIST, default="None", help="Comma-separated list of the separation operations. Allowed operations: ['direction', 'regions', 'chroms']. As the option is an inclusion of the separate command, enter: hicue separate --help for more information. ")
-# @click.option('--separation_regions', type=click.Path(exists=True, dir_okay=False, readable=True, path_type='csv'), help="Path to csv file providing the regions when --separate_by regions mode is selected. As the option is an inclusion of the separate command, enter: hicue separate --help for more information.")# Allows discountinuous interval if provided with the same ID. Csv format: Id,Chromosome,Start,End.")
+@click.option('--separate_by', type=STR_LIST, default="None", help="Comma-separated list of the separation operations. Allowed operations: ['direction', 'regions', 'chroms']. As the option is an inclusion of the separate command, enter: hicue separate --help for more information. ")
+@click.option('--separation_regions', type=click.Path(exists=True, dir_okay=False, readable=True, path_type='csv'), help="Path to csv file providing the regions when --separate_by regions mode is selected. As the option is an inclusion of the separate command, enter: hicue separate --help for more information.")# Allows discountinuous interval if provided with the same ID. Csv format: Id,Chromosome,Start,End.")
 @click.option('--contact_separation', type=click.Choice(['cis_trans','distance','none'], case_sensitive=False), default='none', help="Separation option for the --loops.\ncis_trans: cis contacts and trans contact will be plotted separatly. Recomended parameters: --detrending ps --method_pileup mean.\ndistance: using the --contact_range parameter, will compute a selection for each distance in the range. Only applicable on cis contact (if the --trans option is enabled, will not compute the trans contacts). Default value: None.")
 @click.option('--contact_range', type=(int, int, int), default=["20000", "200000", "30000"], help="Provides MIN MAX STEP in bp as a range for the distance separation on contacts. Overrides the --min_dist option. Default value: (20000,200000,30000).")
 @click.pass_context
@@ -54,6 +56,7 @@ def tracks(ctx,
             detrending, 
             pileup_method,
             flip,
+            raw,
             nb_pos,
             rand_max_dist,
             format,
@@ -66,8 +69,11 @@ def tracks(ctx,
             loci,
             display_strand,
             cmap_limits,
+            cmap_color,
             display_sense,
             center, 
+            separate_by,
+            separation_regions,
             contact_separation,
             contact_range
             ):
@@ -84,6 +90,7 @@ def tracks(ctx,
                 --detrending = {detrending}
                 --pileup_method = {pileup_method}
                 --flip = {flip}
+                --raw = {raw}
                 --nb_pos = {nb_pos}
                 --rand_max_dist = {rand_max_dist}
                 --format = {format}
@@ -96,8 +103,11 @@ def tracks(ctx,
                 --loci = {loci}
                 --display_strand = {display_strand}
                 --cmap_limits = {cmap_limits}
+                --cmap_color = {cmap_color}
                 --display_sense = {display_sense}
                 --center = {center}
+                --separate_by = {separate_by}
+                --separation_regions = {separation_regions}
                 --contact_separation = {contact_separation}
                 --contact_range = {contact_range}
         """)
@@ -114,6 +124,7 @@ def tracks(ctx,
                 "nb_pos":nb_pos,
                 "random_max_dist":rand_max_dist,
                 "loops":loops,
+                "raw":raw,
                 "min_dist":min_dist,
                 "diagonal_mask":diag_mask,
                 "trans_contact":trans,
@@ -125,8 +136,11 @@ def tracks(ctx,
                 "method":pileup_method,
                 "flip":flip,
                 "cmap_pileup": cmap_limits,
+                "cmap_color": cmap_color,
                 "display_sense":display_sense,
                 "center":center,
+                "separate_by":separate_by,
+                "separation_regions":separation_regions,
                 "contact_separation":contact_separation,
                 "contact_range":contact_range
         }

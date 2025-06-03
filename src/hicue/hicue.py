@@ -14,6 +14,7 @@ def extract(cool_files, positions, outpath, params):
     nb_pos = params['nb_pos']
     max_dist = params['random_max_dist']
     loops = params['loops']
+    raw = params['raw']
     min_dist = params['min_dist']
     diagonal_mask = params['diagonal_mask']
     trans_contact = params['trans_contact']
@@ -25,6 +26,7 @@ def extract(cool_files, positions, outpath, params):
     method = params['method']
     flip = params['flip']
     cmap = params['cmap_pileup']
+    cmap_color = params['cmap_color']
     display_sense = params['display_sense']
     center = params["center"]
     separate_by = params["separate_by"]
@@ -83,7 +85,8 @@ def extract(cool_files, positions, outpath, params):
                                                   center=center, 
                                                   sort_contact=contact_separation, 
                                                   contact_range = contact_range,
-                                                  ps_detrend = ps_detrending)
+                                                  ps_detrend = ps_detrending,
+                                                  raw=raw)
 
                 if detrending == "patch":
                     random_submatrices = compute_submatrices(cool, 
@@ -97,15 +100,16 @@ def extract(cool_files, positions, outpath, params):
                                                             trans_contact=False, 
                                                             center = center, 
                                                             sort_contact=contact_separation, 
-                                                            contact_range = contact_range)
+                                                            contact_range = contact_range,
+                                                            raw=raw)
                  
                 for name in submatrices.keys():
                     if len(submatrices[name]) == 0:
                         continue
                     # displaying submatrices
                     if plot_loci:
-                        display_submatrices(submatrices[name], positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense)
-                    display_all_submatrices(submatrices[name], positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense)
+                        display_submatrices(submatrices[name], positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense, binning = bins)
+                    display_all_submatrices(submatrices[name], positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense, binning = bins)
                     
                     # computing pileup
                     if compute_pileup:
@@ -135,8 +139,9 @@ def extract(cool_files, positions, outpath, params):
                         if len(pileup_outpath) > 0:
                             if not os.path.exists(f"{outfolder}/matrices_tables"):
                                 os.mkdir(f"{outfolder}/matrices_tables")
-                            pd.DataFrame(pileup).to_csv(f"{outfolder}/matrices_tables/{name}_pileup.csv")
-                        display_pileup(pileup, window, cmap=cmap, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=flip, display_sense=display_sense)
+                            size = int(np.sqrt(len(pileup)))
+                            pd.DataFrame(pileup.reshape((size, size))).to_csv(f"{outfolder}/matrices_tables/{name}_pileup.csv")
+                        display_pileup(pileup, window, cmap=cmap, cmap_color=cmap_color, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=flip, display_sense=display_sense, binning = bins)
 
 def extract2d(cool_files, positions, outpath, params):
 
@@ -150,6 +155,7 @@ def extract2d(cool_files, positions, outpath, params):
     nb_pos = params['nb_pos']
     max_dist = params['random_max_dist']
     loops = params['loops']
+    raw = params['raw']
     min_dist = params['min_dist']
     diagonal_mask = params['diagonal_mask']
     trans_contact = params['trans_contact']
@@ -161,6 +167,7 @@ def extract2d(cool_files, positions, outpath, params):
     method = params['method']
     flip = params['flip']
     cmap = params['cmap_pileup']
+    cmap_color = params['cmap_color']
     display_sense = params['display_sense']
     center = params["center"]
     separate_by = params["separate_by"]
@@ -219,7 +226,8 @@ def extract2d(cool_files, positions, outpath, params):
                                                   sort_contact=contact_separation, 
                                                   contact_range = contact_range,
                                                   ps_detrend = ps_detrending,
-                                                  is_2d=True)
+                                                  is_2d=True,
+                                                  raw=raw)
 
                 if detrending == "patch":
                     random_submatrices = compute_submatrices(cool, 
@@ -234,7 +242,8 @@ def extract2d(cool_files, positions, outpath, params):
                                                             center = center, 
                                                             sort_contact=contact_separation, 
                                                             contact_range = contact_range,
-                                                            is_2d=True)
+                                                            is_2d=True,
+                                                            raw=raw)
 
                 single_positions, single_pairs = compute_pairs2d(positions)
                 for name in submatrices.keys():
@@ -242,8 +251,8 @@ def extract2d(cool_files, positions, outpath, params):
                         continue
                     # displaying submatrices
                     if plot_loci:
-                        display_submatrices(submatrices[name], single_positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense)
-                    display_all_submatrices(submatrices[name], single_positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense)
+                        display_submatrices(submatrices[name], single_positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense, binning = bins)
+                    display_all_submatrices(submatrices[name], single_positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense, binning = bins)
                     
                     # computing pileup
                     if compute_pileup:
@@ -273,8 +282,9 @@ def extract2d(cool_files, positions, outpath, params):
                         if len(pileup_outpath) > 0:
                             if not os.path.exists(f"{outfolder}/matrices_tables"):
                                 os.mkdir(f"{outfolder}/matrices_tables")
-                            pd.DataFrame(pileup).to_csv(f"{outfolder}/matrices_tables/{name}_pileup.csv")
-                        display_pileup(pileup, window, cmap=cmap, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=flip, display_sense=display_sense)
+                            size = int(np.sqrt(len(pileup)))
+                            pd.DataFrame(pileup.reshape((size, size))).to_csv(f"{outfolder}/matrices_tables/{name}_pileup.csv")
+                        display_pileup(pileup, window, cmap=cmap, cmap_color=cmap_color, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=flip, display_sense=display_sense, binning = bins)
 
 
 def tracks(cool_files, tracks, outpath, params):
@@ -292,6 +302,7 @@ def tracks(cool_files, tracks, outpath, params):
     nb_pos = params['nb_pos']
     max_dist = params['random_max_dist']
     loops = params['loops']
+    raw = params['raw']
     min_dist = params['min_dist']
     diagonal_mask = params['diagonal_mask']
     trans_contact = params['trans_contact']
@@ -303,8 +314,12 @@ def tracks(cool_files, tracks, outpath, params):
     method = params['method']
     flip = params['flip']
     cmap = params['cmap_pileup']
+    cmap_color = params['cmap_color']
     display_sense = params['display_sense']
     center = params["center"]
+    separate_by = params["separate_by"]
+    separate_regions = params["separation_regions"]
+    overlap = params["overlap"]
     contact_separation = params["contact_separation"]
     contact_range = params["contact_range"]
     ps_detrending = params["detrending"] == "ps"
@@ -313,7 +328,7 @@ def tracks(cool_files, tracks, outpath, params):
     tracks_parsed, bw_tracks = parse_tracks(tracks, threshold = threshold, percentage = percentage, gff=gff, binning=binning)
     data_title = tracks.split('/')[-1].split('.')[0].replace('/', '_')
 
-    selected_positions = separate_positions(tracks_parsed, data_title, outpath=outpath)
+    selected_positions = separate_positions(tracks_parsed, data_title, separate_by=separate_by, separate_regions=separate_regions, overlap=overlap, outpath=outpath)
     random_locus = []
     for position_name, positions in selected_positions.items():
         for cool_path in cool_files:
@@ -347,7 +362,8 @@ def tracks(cool_files, tracks, outpath, params):
                                                   center=center, 
                                                   sort_contact=contact_separation, 
                                                   contact_range = contact_range,
-                                                  ps_detrend = ps_detrending)
+                                                  ps_detrend = ps_detrending,
+                                                  raw=raw)
 
                 if detrending == "patch":
                     random_submatrices = compute_submatrices(cool, 
@@ -362,7 +378,8 @@ def tracks(cool_files, tracks, outpath, params):
                                                             center = center, 
                                                             sort_contact=contact_separation, 
                                                             contact_range = contact_range,
-                                                            compile=True)
+                                                            compile=True,
+                                                            raw=raw)
                     
                 # computing subtracks
                 subtracks = compute_subtracks(bw_tracks, positions, window, center = center, circular=circular_chromosomes)
@@ -374,8 +391,8 @@ def tracks(cool_files, tracks, outpath, params):
                         continue
                     # displaying submatrices
                     if plot_loci:
-                        display_submatrices(submatrices[name], positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense, tracks=subtracks, track_label=track_unit)
-                    display_all_submatrices(submatrices[name], positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense)
+                        display_submatrices(submatrices[name], positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense, tracks=subtracks, track_label=track_unit, binning = bins)
+                    display_all_submatrices(submatrices[name], positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense, binning = bins)
                     
                     # computing pileup
                     if compute_pileup:
@@ -407,21 +424,22 @@ def tracks(cool_files, tracks, outpath, params):
                         if len(pileup_outpath) > 0:
                             if not os.path.exists(f"{outfolder}/matrices_tables"):
                                 os.mkdir(f"{outfolder}/matrices_tables")
-                            pd.DataFrame(pileup).to_csv(f"{outfolder}/matrices_tables/{name}_pileup.csv")
+                            size = int(np.sqrt(len(pileup)))
+                            pd.DataFrame(pileup.reshape((size, size))).to_csv(f"{outfolder}/matrices_tables/{name}_pileup.csv")
 
                         track_pileup = compile_tracks(positions, subtracks, method = method, flip = flip)
                         # TODO: put the detrending mode in the log and not the figure; only display "detrended"
                         if detrending == "patch":
                             track_pileup_null = compile_tracks(random_locus, random_subtracks, method = method, flip = flip)
                             track_pileup = track_pileup /track_pileup_null
-                            track_unit = track_unit + "\n(patch detrended)"
+                            track_unit_title = f"{track_unit}\n(patch detrended)"
                         if detrending == "ps":
                             mean_value = bw_tracks.header()['sumData']/bw_tracks.header()['nBasesCovered']
                             track_pileup = track_pileup / mean_value
-                            track_unit = track_unit + "\n(detrended by global mean)"
+                            track_unit_title = f"{track_unit}\n(detrended by global mean)"
 
                         display_strand_specified = flip and (not loops)
-                        display_pileup(pileup, window, track_pileup=track_pileup, cmap=cmap, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=display_strand_specified, display_sense=display_sense, is_contact=loops, track_label=f"{method}\n{track_unit}")
+                        display_pileup(pileup, window, track_pileup=track_pileup, cmap=cmap, cmap_color=cmap_color, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=display_strand_specified, display_sense=display_sense, is_contact=loops, track_label=f"{method}\n{track_unit_title}", binning = bins)
 
 def annotate(gff, bed):
     pass
