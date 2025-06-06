@@ -69,9 +69,17 @@ def compare(ctx,
             contact_separation,
             contact_range
             ):
-        click.echo(f"""comparing {cool_pair}
+        
+        # oppening log
+        log = open(f"{outpath}/{datetime.datetime.now()}_log.txt", 'w')
+        log.write(f"Compare mode.\nExecuting command: hicue {' '.join(sys.argv[1:])}\n")
+
+
+        log.write(f"""comparing {cool_pair}
                 positions file: {positions}
                 outpath: {outpath}
+                
+                Options:
                 --gff = {gff}
                 --windows = {windows}
                 --detrending = {detrending}
@@ -129,4 +137,4 @@ def compare(ctx,
                 "contact_range":contact_range
         }
 
-        h.compare(cool_pair, positions, outpath, params)
+        h.compare(cool_pair, positions, outpath, params, log = log)

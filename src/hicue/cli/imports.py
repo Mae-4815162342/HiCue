@@ -14,4 +14,6 @@ import pyBigWig
 from matplotlib import colormaps
 from shutil import rmtree
 
+import datetime
+import sys
 import os
