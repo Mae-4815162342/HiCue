@@ -20,7 +20,21 @@ def adjust_extents(ax, chrom1, chrom2, circular=[], chromsizes={}):
             extent_y[i] = str(int(extent_y[i]) - chromsizes[chrom1]//1000) if chrom1 in circular else " "
     ax.set_yticklabels(extent_y)
 
-def plot_map(ax, matrix, loc1, loc2, window, locus, title="", display_sense="forward", circular = [], chromsizes={}, display_strand=False, strand_level=1.2, cmap=None, adjust=True, show_title=True):
+def opti_limits(matrices, quantile = 0.01):
+    """Optimizes the colormap limits based on the values contained in the matrices"""
+    vmin = np.nanquantile(matrices[0], quantile)
+    vmax = np.nanquantile(matrices[0], 1 - quantile)
+    
+    for matrix in matrices[1:]:
+        quant_inf = np.nanquantile(matrix, quantile)
+        quant_sup = np.nanquantile(matrix, 1 - quantile)
+        
+        vmin = quant_inf if quant_inf < vmin else vmin
+        vmax = quant_sup if quant_sup > vmax else vmax
+    
+    return vmin, vmax
+
+def plot_map(ax, matrix, loc1, loc2, window, locus, title="", display_sense="forward", circular = [], chromsizes={}, display_strand=False, strand_level=1.2, cmap=None, color="afmhot_r", adjust=True, show_title=True, log=True):
     """Plots a single matrix on the provided axis"""
     is_contact = loc1 != loc2
     strand = not is_contact and locus.iloc[loc1]["Strand"] == -1
@@ -32,15 +46,15 @@ def plot_map(ax, matrix, loc1, loc2, window, locus, title="", display_sense="for
     if show_title:
         ax.set_title(title)
 
-    log_matrix = np.log10(matrix)
+    display_matrix = np.log10(matrix) if log else matrix
     vmin = cmap[0] if cmap != None else None
     vmax = cmap[1] if cmap != None else None
 
     match display_sense:
         case "forward":
-            mat = ax.imshow(log_matrix, extent=[(pos2 - window)//1000, (pos2 + window)//1000, (pos1 + window)//1000, (pos1 - window)//1000], cmap="afmhot_r", vmin=vmin, vmax=vmax)
+            mat = ax.imshow(display_matrix, extent=[(pos2 - window)//1000, (pos2 + window)//1000, (pos1 + window)//1000, (pos1 - window)//1000], cmap=color, vmin=vmin, vmax=vmax)
         case "reverse":
-            mat = ax.imshow(np.flip(log_matrix), extent=[(pos2 + window)//1000, (pos2 - window)//1000, (pos1 - window)//1000, (pos1 + window)//1000], cmap="afmhot_r", vmin=vmin, vmax=vmax)
+            mat = ax.imshow(np.flip(display_matrix), extent=[(pos2 + window)//1000, (pos2 - window)//1000, (pos1 - window)//1000, (pos1 + window)//1000], cmap=color, vmin=vmin, vmax=vmax)
     
     chrom1 = locus.iloc[loc1]["Chromosome"]
     chrom2 = locus.iloc[loc2]["Chromosome"]
@@ -291,3 +305,64 @@ def display_all_submatrices(submatrices, locus, window, outfolder="", output_for
     if len(outpath) > 0 :
         pd.DataFrame(index, columns=['Reference', 'Name']).to_csv(outfolder + f"/all_submatrix_references.{binning//1000}kb.csv")
             
+def display_compare(matrix1, matrix2, mat_name1, mat_name2, binning, window, pos1, pos2, positions, position_name, chromsizes={}, output_format=['pdf'], is_pileup=False, outfolder="", is_contact=False, display_sense="forward", display_strand=False, circular=[], cmap=None, cmap_color="afmhot_r"):
+    plt.figure(figsize=(16, 5))
+    gs = grid.GridSpec(5, 4, width_ratios=[1, 1, 1, 0.01])
+
+    ax_mat1 = plt.subplot(gs[:, 0])
+    ax_mat2 = plt.subplot(gs[:, 1])
+    ax_ratio = plt.subplot(gs[:, 2])
+
+    ax_mat_colorbar = plt.subplot(gs[1, 3])
+    ax_ratio_colorbar = plt.subplot(gs[3, 3])
+
+    secondary_pos = pos2 if is_contact and pos2 != None else pos1
+    xlabel = "\nGenomic coordinates (in kb)"
+    ylabel = "Genomic coordinates (in kb)"
+
+    # plotting matrices
+    opti_vmin, opti_vmax = opti_limits([np.log10(matrix1), np.log10(matrix2)])
+    cmap_submat = [opti_vmin, opti_vmax] if cmap == None else cmap
+    if not is_pileup:
+        plot_map(ax_mat1, matrix1, pos1, secondary_pos, window, positions, chromsizes=chromsizes, show_title=False, display_sense=display_sense, display_strand=display_strand, circular=circular, cmap=cmap_submat)
+        im_matrix = plot_map(ax_mat2, matrix2, pos1, secondary_pos, window, positions, chromsizes=chromsizes, show_title=False, display_sense=display_sense, display_strand=display_strand, circular=circular, cmap=cmap_submat)
+        im_ratio = plot_map(ax_ratio, np.log2(matrix1/ matrix2), pos1, secondary_pos, window, positions, chromsizes=chromsizes, show_title=False, display_sense=display_sense, display_strand=display_strand, circular=circular, log=False, color = "bwr")
+
+    else:
+        match display_sense:
+            case "forward":
+                ax_mat1.imshow(np.log10(matrix1), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap=cmap_color, vmin=cmap_submat[0], vmax=cmap_submat[1])
+                im_matrix = ax_mat2.imshow(np.log10(matrix2), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap=cmap_color, vmin=cmap_submat[0], vmax=cmap_submat[1])
+                im_ratio = ax_ratio.imshow(np.log2(matrix1/ matrix2), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap="bwr")
+            case "reverse":
+                ax_mat1.imshow(np.log10(matrix1), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap=cmap_color, vmin=cmap_submat[0], vmax=cmap_submat[1])
+                im_matrix = ax_mat2.imshow(np.log10(matrix2), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap=cmap_color, vmin=cmap_submat[0], vmax=cmap_submat[1])
+                im_ratio = ax_ratio.imshow(np.log2(matrix1/ matrix2), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap="bwr")
+
+    # plotting axis and colorbars
+    ax_mat1.set_ylabel(ylabel)
+    ax_mat1.set_xlabel(xlabel)
+    ax_mat2.set_xlabel(xlabel)
+    ax_ratio.set_xlabel(xlabel)
+
+    plt.colorbar(im_matrix, cax=ax_mat_colorbar)
+    plt.colorbar(im_ratio, cax=ax_ratio_colorbar)
+
+    # titles
+    name = f"{positions.iloc[pos1]['Name'].replace('/', '_')} submatrices" if not is_contact else f"{positions.iloc[pos1]['Name'].replace('/', '_')}-{positions.iloc[pos2]['Name'].replace('/', '_')} submatrices"
+    if is_pileup:
+        name = position_name + " pileups"
+    binning_title = f" ({binning//1000}kb binning)"
+    plt.suptitle(name + binning_title)
+    ax_mat1.set_title(mat_name1)
+    ax_mat2.set_title(mat_name2)
+    ax_ratio.set_title(f"{mat_name1}/{mat_name2}")
+    ax_mat_colorbar.set_title("Normalized\ncontact\n(in log10)", fontsize=9)
+    ax_ratio_colorbar.set_title("Log2 ratio", fontsize=9)
+
+    outpath = outfolder + f"/{name.replace(' ','_')}"
+    if len(outfolder) > 0 :
+        for format in output_format:
+            plt.savefig(outpath + f".{binning // 1000}kb.{window // 1000}kb_window.{format}", bbox_inches="tight")
+    else:
+        plt.show()
