@@ -459,5 +459,3 @@ def compile_tracks(positions, tracks, flip = False, method="median"):
             track_pileup = np.nanmean(selected_tracks, axis=0)
 
     return track_pileup
-         
-        

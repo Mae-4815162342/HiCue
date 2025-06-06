@@ -12,5 +12,6 @@ from matplotlib import gridspec as grid
 from chromosight.utils.preprocessing import distance_law
 import pyBigWig
 from matplotlib import colormaps
+from shutil import rmtree
 
 import os

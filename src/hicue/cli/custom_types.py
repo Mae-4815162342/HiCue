@@ -34,6 +34,53 @@ class coolType(click.ParamType):
                         files.append(file)
             return files
 
+# accepts a pair of comma-separated cool files or a file containing a list of pairs of cool, one comma-separated pair per line
+class coolPairType(click.ParamType):
+    name="cool_pairs"
+
+    def is_cool(self, file):
+        try:
+            return cooler.fileops.is_cooler(file)
+        except:
+            return False
+    
+    def is_cool_pair(self, value):
+        splited_values = value.split(',')
+        if len(splited_values) != 2:
+            return False
+        if not self.is_cool(splited_values[0]) or not self.is_cool(splited_values[1]):
+            return False
+        return True
+        
+    def is_same_bin_pair(self, value):
+        splited_values = value.split(',')
+        # checking the pair has the same binning
+        cool1 = cooler.Cooler(splited_values[0])
+        cool2 = cooler.Cooler(splited_values[1])
+        if cool1.binsize != cool2.binsize:
+            return False
+        return True
+
+    def convert(self, value, param, ctx):
+        if self.is_cool_pair(value):
+            if not self.is_same_bin_pair(value):
+                self.fail(f"The files {value} do not have the same binning value.", param, ctx)
+            return [value.split(',')]
+        elif not os.path.isfile(value):
+            self.fail(f"{value} is not a valid comma-separated pair of cool file, neither a file containing pairs of cool files.", param, ctx)
+        else:
+            files = []
+            with open(value, 'r') as f:
+                for line in f.readlines():
+                    file_list = line.replace('\n', '').replace(' ', '')
+                    if not self.is_cool_pair(file_list):
+                        self.fail(f"{file_list} is not a valid comma-separated pair of cool file.", param, ctx)
+                    if not self.is_same_bin_pair(file_list):
+                        self.fail(f"The files {file_list} do not have the same binning value.", param, ctx)
+                    else:
+                        files.append(file_list.split(","))
+            return files
+
 class IntListType(click.ParamType):
     name="int_list"
 
@@ -124,6 +171,7 @@ class TrackFileType(click.ParamType):
 
 
 COOL = coolType()
+COOL_PAIR = coolPairType()
 INT_LIST = IntListType()
 STR_LIST = StrListType()
 POSITION_FILE = PositionFileType()
