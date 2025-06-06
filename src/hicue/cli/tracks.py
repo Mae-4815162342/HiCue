@@ -77,9 +77,15 @@ def tracks(ctx,
             contact_separation,
             contact_range
             ):
-        click.echo(f"""Extracting from {cool_files}
+        
+        # oppening log
+        log = open(f"{outpath}/{datetime.datetime.now()}_log.txt", 'w')
+        log.write(f"Tracks mode.\nExecuting command: hicue {' '.join(sys.argv[1:])}\n")
+        log.write(f"""Extracting from {cool_files}
                 tracks file: {tracks}
                 outpath: {outpath}
+
+                Options:
                 --threshold = {threshold}
                 --percentage = {percentage}
                 --gff = {gff}
@@ -145,4 +151,4 @@ def tracks(ctx,
                 "contact_range":contact_range
         }
 
-        h.tracks(cool_files, tracks, outpath, params)
+        h.tracks(cool_files, tracks, outpath, params, log = log)

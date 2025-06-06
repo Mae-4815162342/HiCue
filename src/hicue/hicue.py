@@ -2,7 +2,7 @@ from .utils import *
 from .displays import *
 from .parser import *
 
-def extract(cool_files, positions, outpath, params):
+def extract(cool_files, positions, outpath, params, log = None):
 
     if not os.path.exists(outpath):
         os.mkdir(outpath)
@@ -143,7 +143,7 @@ def extract(cool_files, positions, outpath, params):
                             pd.DataFrame(pileup.reshape((size, size))).to_csv(f"{outfolder}/matrices_tables/{name}_pileup.csv")
                         display_pileup(pileup, window, cmap=cmap, cmap_color=cmap_color, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=flip, display_sense=display_sense, binning = bins)
 
-def extract2d(cool_files, positions, outpath, params):
+def extract2d(cool_files, positions, outpath, params, log = None):
 
     if not os.path.exists(outpath):
         os.mkdir(outpath)
@@ -287,7 +287,7 @@ def extract2d(cool_files, positions, outpath, params):
                         display_pileup(pileup, window, cmap=cmap, cmap_color=cmap_color, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=flip, display_sense=display_sense, binning = bins)
 
 
-def tracks(cool_files, tracks, outpath, params):
+def tracks(cool_files, tracks, outpath, params, log = None):
     if not os.path.exists(outpath):
         os.mkdir(outpath)
     # parsing parameters
@@ -441,7 +441,7 @@ def tracks(cool_files, tracks, outpath, params):
                         display_strand_specified = flip and (not loops)
                         display_pileup(pileup, window, track_pileup=track_pileup, cmap=cmap, cmap_color=cmap_color, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=display_strand_specified, display_sense=display_sense, is_contact=loops, track_label=f"{method}\n{track_unit_title}", binning = bins)
 
-def compare(cool_pair, positions, outpath, params):
+def compare(cool_pair, positions, outpath, params, log = None):
     if not os.path.exists(outpath):
         os.mkdir(outpath)
 

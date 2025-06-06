@@ -69,9 +69,15 @@ def extract2d(ctx,
             contact_separation,
             contact_range
             ):
-        click.echo(f"""Extracting from {cool_files}
+        
+        # oppening log
+        log = open(f"{outpath}/{datetime.datetime.now()}_log.txt", 'w')
+        log.write(f"Extract2d mode.\nExecuting command: hicue {' '.join(sys.argv[1:])}\n")
+        log.write(f"""Extracting from {cool_files}
                 positions file: {positions}
                 outpath: {outpath}
+
+                Options:
                 --gff = {gff}
                 --windows = {windows}
                 --detrending = {detrending}
@@ -129,4 +135,4 @@ def extract2d(ctx,
                 "contact_range":contact_range
         }
 
-        h.extract2d(cool_files, positions, outpath, params)
+        h.extract2d(cool_files, positions, outpath, params, log = log)
