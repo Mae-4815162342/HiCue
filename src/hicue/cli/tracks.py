@@ -79,6 +79,8 @@ def tracks(ctx,
             ):
         
         # oppening log
+        if not os.path.exists(outpath):
+                os.mkdir(outpath)
         log = open(f"{outpath}/{datetime.datetime.now()}_log.txt", 'w')
         log.write(f"Tracks mode.\nExecuting command: hicue {' '.join(sys.argv[1:])}\n")
         log.write(f"""Extracting from {cool_files}

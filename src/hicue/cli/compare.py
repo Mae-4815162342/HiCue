@@ -9,8 +9,8 @@ import hicue.hicue as h
 
 @click.command("compare")
 @click.argument("outpath", type=click.Path(file_okay=False))
-@click.argument('positions', type=POSITION_FILE)
-@click.argument("cool_pair", type=COOL_PAIR)
+@click.argument('positions', type=POSITION_FILE)#, help="If replaced by . , the comparison operations will be computed and displayed on the all matrices.")
+@click.argument("cool_pair", type=COOL_PAIR)#, help="Pairs of cools, or file containing pairs of cools (comma-separated cool files, one per line)")
 @click.option('--gff', type=GFF_FILE, help="Gff file provided for the position file automatic annotation if the file is a bed2d. The positions considered for pileup are all the genes contained in the bed2d files. For more options, use the hicue annotate command.")
 @click.option('-w', '--windows', type=INT_LIST, default="30000", help="Window size for sub-matrices extraction in bp. Several window sizes can be provided as a comma-separated list. Default value: 30000.")
 @click.option('-d', '--detrending',type=click.Choice(['patch', 'ps', 'none'], case_sensitive=False), default='none', help='Detrending option. Default value: none.')
@@ -26,7 +26,6 @@ import hicue.hicue as h
 @click.option('--min_dist', type=int, default="30000", help="Minimal distance in bp between two positions before the pair is used in the --loops option. Default value: 30000.")
 @click.option('--diag_mask', type=int, default="0", help="Distance from the diagonal in bp to which the matrix are set to NaN. Is applied only if superior to the bin size. Default value: 0")
 @click.option('--pileup/--no-pileup', default=True, help="Compute and display pileups.")
-@click.option('--loci/--no-loci', default=False, help="Display single loci as individual figures.")
 @click.option('--display_strand', is_flag=True, help="Display strands on the single matrices and pileup. Requires the strand annotation of provided positions.")
 @click.option('--cmap_limits', type=(float, float), help="Min and Max value for matrix display. Usage: --cmap_limits MIN MAX.")
 @click.option('--cmap_color', type=click.Choice(list(colormaps)), default="seismic", help="Colormap used for pileup. Must be a valid matplotlib colormap. Default: seismic")
@@ -57,7 +56,6 @@ def compare(ctx,
             min_dist,
             diag_mask,
             pileup,
-            loci,
             display_strand,
             cmap_limits,
             cmap_color,
@@ -71,10 +69,10 @@ def compare(ctx,
             ):
         
         # oppening log
+        if not os.path.exists(outpath):
+                os.mkdir(outpath)
         log = open(f"{outpath}/{datetime.datetime.now()}_log.txt", 'w')
         log.write(f"Compare mode.\nExecuting command: hicue {' '.join(sys.argv[1:])}\n")
-
-
         log.write(f"""comparing {cool_pair}
                 positions file: {positions}
                 outpath: {outpath}
@@ -95,7 +93,6 @@ def compare(ctx,
                 --min-dist = {min_dist}
                 --diag_mask = {diag_mask}
                 --pileup = {pileup}
-                --loci = {loci}
                 --display_strand = {display_strand}
                 --cmap_limits = {cmap_limits}
                 --cmap_color = {cmap_color}
@@ -123,7 +120,6 @@ def compare(ctx,
                 "display_strand":display_strand,
                 "output_formats":format,
                 "pileup":pileup,
-                "loci":loci,
                 "method":pileup_method,
                 "flip":flip,
                 "cmap_pileup": cmap_limits,

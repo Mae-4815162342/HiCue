@@ -74,6 +74,28 @@ def plot_map(ax, matrix, loc1, loc2, window, locus, title="", display_sense="for
         ax.text(pos2//1000, pos_up, transcription_sens, horizontalalignment=arrow_alignment, fontsize=20)
     return mat
 
+def plot_global_map(ax, matrix, chromsizes, display_sense="forward", title="", cmap=None, color="afmhot_r", log=True):
+    """Plots a single matrix on the provided axis"""
+    if len(title) > 0:
+        ax.set_title(title)
+
+    display_matrix = np.log10(matrix) if log else matrix
+    vmin = cmap[0] if cmap != None else None
+    vmax = cmap[1] if cmap != None else None
+
+    genome_size = np.sum(np.array([chromsizes[chrom] for chrom in chromsizes.keys()]))
+    if len(chromsizes) > 0:
+        # TODO add chromosomes in axis ticks
+        pass
+
+    match display_sense:
+        case "forward":
+            mat = ax.imshow(display_matrix, extent=[0, genome_size//1000, genome_size//1000, 0], cmap=color, vmin=vmin, vmax=vmax)
+        case "reverse":
+            mat = ax.imshow(np.flip(display_matrix), extent=[genome_size//1000, 0, 0, genome_size//1000], cmap=color, vmin=vmin, vmax=vmax)
+    
+    return mat
+
 def display_submatrices(submatrices, locus, window, outfolder="", output_format=['pdf'], circular=[], chromsizes = {}, display_strand=False, display_sense="forward", tracks = None, track_label = "", binning=1000):
     if len(outfolder) > 0 and not os.path.exists(outfolder):
         os.mkdir(outfolder)
@@ -163,7 +185,7 @@ def display_submatrices(submatrices, locus, window, outfolder="", output_format=
         else:
             plt.show()
 
-def display_pileup(pileup, window, track_pileup=[], cmap=None, cmap_color="seismic", title="", outpath="", output_format=['.pdf'], display_strand=True, display_sense="forward", is_contact = False, track_label="Average Track", binning=1000):
+def display_pileup(pileup, window, track_pileup=[], cmap=None, cmap_color="seismic", title="", track_title="", outpath="", output_format=['.pdf'], display_strand=True, display_sense="forward", is_contact = False, track_label="Average Track", binning=1000):
     vmin = None if cmap == None else cmap[0]
     vmax = None if cmap == None else cmap[1]
     xlabel = "\nGenomic coordinates (in kb)"
@@ -238,6 +260,10 @@ def display_pileup(pileup, window, track_pileup=[], cmap=None, cmap_color="seism
             ax_track2.yaxis.tick_right()
             ax_track2.set_xlabel(track_label)
 
+        if len(track_title) > 0:
+            ax_track1.set_title(track_title, fontsize=11)
+            if is_contact:
+                ax_track2.set_ylabel(track_title, fontsize=11)
         ax_track1.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
 
@@ -305,7 +331,7 @@ def display_all_submatrices(submatrices, locus, window, outfolder="", output_for
     if len(outpath) > 0 :
         pd.DataFrame(index, columns=['Reference', 'Name']).to_csv(outfolder + f"/all_submatrix_references.{binning//1000}kb.csv")
             
-def display_compare(matrix1, matrix2, mat_name1, mat_name2, binning, window, pos1, pos2, positions, position_name, chromsizes={}, output_format=['pdf'], is_pileup=False, outfolder="", is_contact=False, display_sense="forward", display_strand=False, circular=[], cmap=None, cmap_color="afmhot_r"):
+def display_compare(matrix1, matrix2, mat_name1, mat_name2, binning, window, pos1, pos2, positions, position_name, chromsizes={}, output_format=['pdf'], is_pileup=False, outfolder="", is_contact=False, display_sense="forward", display_strand=False, circular=[], cmap=None, cmap_color="afmhot_r", is_global=False):
     plt.figure(figsize=(16, 5))
     gs = grid.GridSpec(5, 4, width_ratios=[1, 1, 1, 0.01])
 
@@ -324,20 +350,33 @@ def display_compare(matrix1, matrix2, mat_name1, mat_name2, binning, window, pos
     opti_vmin, opti_vmax = opti_limits([np.log10(matrix1), np.log10(matrix2)])
     cmap_submat = [opti_vmin, opti_vmax] if cmap == None else cmap
     if not is_pileup:
-        plot_map(ax_mat1, matrix1, pos1, secondary_pos, window, positions, chromsizes=chromsizes, show_title=False, display_sense=display_sense, display_strand=display_strand, circular=circular, cmap=cmap_submat)
-        im_matrix = plot_map(ax_mat2, matrix2, pos1, secondary_pos, window, positions, chromsizes=chromsizes, show_title=False, display_sense=display_sense, display_strand=display_strand, circular=circular, cmap=cmap_submat)
-        im_ratio = plot_map(ax_ratio, np.log2(matrix1/ matrix2), pos1, secondary_pos, window, positions, chromsizes=chromsizes, show_title=False, display_sense=display_sense, display_strand=display_strand, circular=circular, log=False, color = "bwr")
+        if not is_global:
+            plot_map(ax_mat1, matrix1, pos1, secondary_pos, window, positions, chromsizes=chromsizes, show_title=False, display_sense=display_sense, display_strand=display_strand, circular=circular, cmap=cmap_submat)
+            im_matrix = plot_map(ax_mat2, matrix2, pos1, secondary_pos, window, positions, chromsizes=chromsizes, show_title=False, display_sense=display_sense, display_strand=display_strand, circular=circular, cmap=cmap_submat)
+            im_ratio = plot_map(ax_ratio, np.log2(matrix1/ matrix2), pos1, secondary_pos, window, positions, chromsizes=chromsizes, show_title=False, display_sense=display_sense, display_strand=display_strand, circular=circular, log=False, color = "bwr")
+        else:
+            plot_global_map(ax_mat1, matrix1, chromsizes, display_sense=display_sense)
+            im_matrix = plot_global_map(ax_mat2, matrix2, chromsizes, display_sense=display_sense)
+            im_ratio = plot_global_map(ax_ratio, np.log2(matrix1/ matrix2), chromsizes, display_sense=display_sense, log=False, color = "bwr")
 
     else:
         match display_sense:
             case "forward":
                 ax_mat1.imshow(np.log10(matrix1), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap=cmap_color, vmin=cmap_submat[0], vmax=cmap_submat[1])
                 im_matrix = ax_mat2.imshow(np.log10(matrix2), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap=cmap_color, vmin=cmap_submat[0], vmax=cmap_submat[1])
-                im_ratio = ax_ratio.imshow(np.log2(matrix1/ matrix2), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap="bwr")
+                im_ratio = ax_ratio.imshow(np.log2(matrix1/ matrix2), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap="viridis")
             case "reverse":
                 ax_mat1.imshow(np.log10(matrix1), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap=cmap_color, vmin=cmap_submat[0], vmax=cmap_submat[1])
                 im_matrix = ax_mat2.imshow(np.log10(matrix2), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap=cmap_color, vmin=cmap_submat[0], vmax=cmap_submat[1])
-                im_ratio = ax_ratio.imshow(np.log2(matrix1/ matrix2), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap="bwr")
+                im_ratio = ax_ratio.imshow(np.log2(matrix1/ matrix2), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap="viridis")
+
+        if display_strand:
+            transcription_sens = ARROW_LEFT if display_sense == "reverse" else ARROW_RIGHT
+            arrow_alignment = "right" if display_sense == "reverse" else "left"
+            to = -window//1000 * 1.2 if display_sense == "reverse" else window//1000 * 1.2
+            ax_mat1.text(0, to, transcription_sens, horizontalalignment=arrow_alignment, fontsize=20)
+            ax_mat2.text(0, to, transcription_sens, horizontalalignment=arrow_alignment, fontsize=20)
+            ax_ratio.text(0, to, transcription_sens, horizontalalignment=arrow_alignment, fontsize=20)
 
     # plotting axis and colorbars
     ax_mat1.set_ylabel(ylabel)
@@ -349,9 +388,12 @@ def display_compare(matrix1, matrix2, mat_name1, mat_name2, binning, window, pos
     plt.colorbar(im_ratio, cax=ax_ratio_colorbar)
 
     # titles
-    name = f"{positions.iloc[pos1]['Name'].replace('/', '_')} submatrices" if not is_contact else f"{positions.iloc[pos1]['Name'].replace('/', '_')}-{positions.iloc[pos2]['Name'].replace('/', '_')} submatrices"
-    if is_pileup:
-        name = position_name + " pileups"
+    if not is_global:
+        name = f"{positions.iloc[pos1]['Name'].replace('/', '_')} submatrices" if not is_contact else f"{positions.iloc[pos1]['Name'].replace('/', '_')}-{positions.iloc[pos2]['Name'].replace('/', '_')} submatrices"
+        if is_pileup:
+            name = position_name + " pileups"
+    else:
+        name = "Complete genome contact matrices"
     binning_title = f" ({binning//1000}kb binning)"
     plt.suptitle(name + binning_title)
     ax_mat1.set_title(mat_name1)
@@ -363,6 +405,9 @@ def display_compare(matrix1, matrix2, mat_name1, mat_name2, binning, window, pos
     outpath = outfolder + f"/{name.replace(' ','_')}"
     if len(outfolder) > 0 :
         for format in output_format:
-            plt.savefig(outpath + f".{binning // 1000}kb.{window // 1000}kb_window.{format}", bbox_inches="tight")
+            if not is_global:
+                plt.savefig(outpath + f".{binning // 1000}kb.{window // 1000}kb_window.{format}", bbox_inches="tight")
+            else:
+                plt.savefig(outpath + f".{binning // 1000}kb.{format}", bbox_inches="tight")
     else:
         plt.show()

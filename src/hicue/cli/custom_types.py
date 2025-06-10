@@ -110,6 +110,8 @@ class PositionFileType(click.ParamType):
 
     #  accepts bed and gff files. Returns a tuple indicating the type and path of the file
     def convert(self, value, param, ctx):
+        if value == '.':
+            return 'global', value
         if not os.path.isfile(value):
             self.fail(f"{value} is not an existing file.")
         try:
