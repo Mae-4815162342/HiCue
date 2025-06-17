@@ -13,15 +13,73 @@ readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 license = {text = "CC BY-NC 4.0"}
 license-files = ["LICENSE"]
 dependencies = [
-  "cooler>0.10",
+  "cooler>=0.10",
   "chromosight",
   "bcbio-gff",
-  "pyBigWig"
+  "pyBigWig", 
+  "click",
+  "numpy",
+  "pandas>=1.5.0",
+  "matplotlib",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-pylint",
+    "pytest-order",
+    "codecov",
+    "pylint",
+    "ruff",
+]
+dev = [
+    "hicue[test]",
+    "hatch",
+    "hatchling", 
+    "mypy",
+    "black",
+    "twine",
+    "ipython"
+]
+
+[tool.pytest.ini_options]
+markers = ["order: mark test to run in a specific order"]
+minversion = "7"
+log_cli_level = "INFO"
+xfail_strict = true
+addopts = [
+    "-ra",
+    "--strict-config",
+    "--strict-markers",
+    "--cov=hicue",
+    "--cov-config=pyproject.toml",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+filterwarnings = ["ignore::PendingDeprecationWarning"]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src/hicue"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "return NotImplemented",
+    "raise NotImplementedError"
 ]
 
 [project.urls]
