@@ -78,8 +78,6 @@ def test_hicue_extract_loops():
                 "mean",
                 "--nb_pos",
                 "3",
-                "--loops",
-                "--trans",
                 "--detrending",
                 "patch",
                 "--diag_mask",
