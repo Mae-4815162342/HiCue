@@ -1,6 +1,5 @@
 # Package development files
 pip_instructions.txt
-test_data
 tmp.txt
 
 # Coverage reports
@@ -51,6 +50,8 @@ venv.bak/
 
 # pytest
 .pytest_cache/
+coverage.xml
+out/
 
 # mypy
 .mypy_cache/
