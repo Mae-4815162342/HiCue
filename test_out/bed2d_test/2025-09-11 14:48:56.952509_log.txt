@@ -1,0 +1,9 @@
+Extract mode.
+Executing command: hicue extract test_out/bed2d_test test_data/positions/plants_loops.bed2d test_data/matrices/Control.mcool::resolutions/1000 --circulars NC_014500.1 --windows 100000 --detrending patch --flip -t 8 --save_tmp --display_strand
+Extracting from ['test_data/matrices/Control.mcool::resolutions/1000']
+                positions file: ('bed2d', 'test_data/positions/plants_loops.bed2d')
+                outpath: test_out/bed2d_test
+                
+                Options:
+                {'circulars': ['NC_014500.1'], 'windows': [100000], 'detrending': 'patch', 'flip': True, 'threads': 8, 'save_tmp': True, 'display_strand': True, 'gff': None, 'tracks': None, 'binnings': [1000], 'method': 'median', 'raw': False, 'nb_pos': 2, 'rand_max_dist': 100000, 'format': ['pdf'], 'loops': False, 'trans': False, 'min_dist': 30000, 'diag_mask': 0, 'pileup': True, 'loci': False, 'cmap_limits': None, 'indiv_cmap_limits': None, 'cmap_color': 'seismic', 'indiv_cmap_color': 'afmhot_r', 'display_sense': 'forward', 'center': 'start', 'overlap': 'strict', 'separate_by': None, 'separation_regions': None, 'contact_range': None}
+        Total time: 1.1859619617462158
