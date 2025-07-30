@@ -210,7 +210,7 @@ def display_pileup(pileup, window, track_pileup=[], cmap=None, cmap_color="seism
             transcription_sens = ARROW_LEFT if display_sense == "reverse" else ARROW_RIGHT
             arrow_alignment = "right" if display_sense == "reverse" else "left"
             to = -window//1000 * 1.2 if display_sense == "reverse" else window//1000 * 1.2
-            plt.text(0, to, horizontalalignment=arrow_alignment, fontsize=20)
+            plt.text(0, to, transcription_sens, horizontalalignment=arrow_alignment, fontsize=20)
 
     else:
         width = 3 if is_contact else 2
