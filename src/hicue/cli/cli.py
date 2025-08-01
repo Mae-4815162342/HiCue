@@ -2,6 +2,7 @@ import click
 
 from . import (
     extract,
+    extract_opti,
     tracks,
     extract2d, 
     compare,
@@ -15,6 +16,7 @@ def cli(ctx):
     pass
 
 cli.add_command(extract.extract)
+cli.add_command(extract_opti.extract_opti)
 cli.add_command(tracks.tracks)
 cli.add_command(extract2d.extract2d)
 cli.add_command(compare.compare)

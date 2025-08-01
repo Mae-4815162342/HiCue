@@ -1,0 +1,34 @@
+Extract mode.
+Executing command: hicue extract_opti test_out/bacteria test_data/SRP_dd_genes.bed test_data/Control.mcool::resolutions/1000 --loci --circulars NC_014500.1 --windows 100000 --detrending patch --flip
+Extracting from ['test_data/Control.mcool::resolutions/1000']
+                positions file: ('bed', 'test_data/SRP_dd_genes.bed')
+                outpath: test_out/bacteria
+                
+                Options:
+                --gff = None
+                --windows = [100000]
+                --detrending = patch
+                --pileup_method = median
+                --flip = True
+                --raw = False
+                --nb_pos = 2
+                --rand_max_dist = 100000
+                --format = ['pdf']
+                --circulars = ['NC_014500.1']
+                --loops = False
+                --trans = False
+                --min-dist = 30000
+                --diag_mask = 0
+                --pileup = True
+                --loci = True
+                --display_strand = False
+                --cmap_limits = None
+                --cmap_color = seismic
+                --display_sense = forward
+                --center = start
+                --separate_by = ['None']
+                --overlap = strict
+                --separation_regions = None
+                --contact_separation = none
+                --contact_range = (20000, 200000, 30000)
+        Total time: 93.53627705574036

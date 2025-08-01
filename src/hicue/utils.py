@@ -137,6 +137,114 @@ def extract_window(cool, locus1, locus2, binning, window, circular=[], trans=Fal
     
     return submatrix
 
+def extract_window_opti(cool, locus1, locus2, binning, window, circular=[], trans=False, diagonal_mask=0, center="start", detrend_matrix = False, raw = False):
+    """Extracts a window from a matix given positions and parameters."""
+    # if trans and locus1["Chromosome"]!=locus2["Chromosome"]:
+    #     extent1 = cool.extent(locus1["Chromosome"])
+    #     extent2 = cool.extent(locus2["Chromosome"])
+    #     matrix = cool.matrix(balance=(not raw))[extent1[0]: extent1[1], extent2[0]:extent2[1]]
+    #     if detrend_matrix:
+    #         matrix =matrix / np.nanmean(matrix)
+    # else:
+    #     matrix = detrend(cool.matrix(balance=(not raw)).fetch(locus1["Chromosome"])) if detrend_matrix else cool.matrix(balance=(not raw)).fetch(locus1["Chromosome"])
+
+    matrix = cool.matrix(balance=(not raw))
+
+    # if locus1["Chromosome"] == locus2["Chromosome"]:
+    #     for i in range(diagonal_mask//binning):
+    #         np.fill_diagonal(matrix[i:],  np.nan)
+    #         np.fill_diagonal(matrix[:,i:],  np.nan)
+
+    match center:
+        case "start":
+            start1 = min(locus1["Start"], locus1["End"]) if locus1["Strand"] == 1 else max(locus1["Start"], locus1["End"])
+            start2 = min(locus2["Start"], locus2["End"]) if locus2["Strand"] == 1 else max(locus2["Start"], locus2["End"])
+        case "center":
+            start1 = (locus1["Start"] + locus1["End"]) // 2
+            start2 = (locus2["Start"] + locus2["End"]) // 2
+        case "end":
+            start1 = max(locus1["Start"], locus1["End"]) if locus1["Strand"] == 1 else min(locus1["Start"], locus1["End"])
+            start2 = max(locus2["Start"], locus2["End"]) if locus2["Strand"] == 1 else min(locus2["Start"], locus2["End"])
+
+    start1 = start1 + 1 if start1 % binning == 0 else start1
+    start2 = start2 + 1 if start2 % binning == 0 else start2
+
+    chrom_size1 = cool.chromsizes[locus1["Chromosome"]]
+    chrom_size2 = cool.chromsizes[locus2["Chromosome"]]
+
+    # 1. checking overflows
+    is_start1_inf = start1 - window < 0
+    is_start1_sup = start1 + window >= chrom_size1
+
+    is_start2_inf = start2 - window < 0
+    is_start2_sup = start2 + window >= chrom_size2
+
+    # 2. computing intervales
+    pos1 = f"{locus1['Chromosome']}:{start1 - window if not is_start1_inf else 0}-{start1 + window if not is_start1_sup else chrom_size1}"
+    pos2 = f"{locus2['Chromosome']}:{start2 - window if not is_start2_inf else 0}-{start2 + window if not is_start2_sup else chrom_size2}"
+
+    # 3. fetching main submatrix
+    submatrix = matrix.fetch(pos1, pos2)[:]
+
+    expected_shape = (window // binning) * 2 + 1
+
+    start1_overflow = is_start1_inf or is_start1_sup
+    start2_overflow = is_start2_inf or is_start2_sup
+
+    # 4. managing overflows
+    if (not start1_overflow and not start2_overflow):
+        return submatrix
+
+    if start1_overflow:
+        if is_start1_inf:
+            pos1_overflow = f"{locus1['Chromosome']}:{chrom_size1 - (window - start1)}-{chrom_size1}"
+        else:
+            pos1_overflow = f"{locus1['Chromosome']}:{0}-{window - (chrom_size1 - start1)}"
+        pos1_overflow_matrix = matrix.fetch(pos1_overflow, pos2)[:]
+
+        if len(pos1_overflow_matrix) + len(submatrix) > expected_shape:
+            pos1_overflow_matrix = pos1_overflow_matrix[1:] if is_start1_inf else pos1_overflow_matrix[:-1]
+        if locus1["Chromosome"] not in circular:
+            pos1_overflow_matrix = np.full(pos1_overflow_matrix.shape, np.nan)
+
+        if not start2_overflow:
+            to_concat = [pos1_overflow_matrix, submatrix] if is_start1_inf else [submatrix, pos1_overflow_matrix]
+            return np.concatenate(to_concat, axis=0)
+
+    if start2_overflow:
+        if is_start2_inf:
+            pos2_overflow = f"{locus1['Chromosome']}:{chrom_size2 - (window - start2)}-{chrom_size2}"
+        else:
+            pos2_overflow = f"{locus1['Chromosome']}:{0}-{window - (chrom_size2 - start2)}"
+        pos2_overflow_matrix = matrix.fetch(pos1, pos2_overflow)[:]
+
+        if len(pos2_overflow_matrix[0]) + len(submatrix[0]) > expected_shape:
+            pos2_overflow_matrix = pos2_overflow_matrix[:, 1:] if is_start2_inf else pos2_overflow_matrix[:, :-1]
+        if locus2["Chromosome"] not in circular:
+            pos2_overflow_matrix = np.full(pos2_overflow_matrix.shape, np.nan)
+
+        if not start1_overflow:
+            to_concat = [pos2_overflow_matrix, submatrix] if is_start2_inf else [submatrix, pos2_overflow_matrix]
+            return np.concatenate(to_concat, axis=1)
+
+    both_overflow = matrix.fetch(pos1_overflow, pos2_overflow)[:]
+    if len(both_overflow) + len(submatrix) > expected_shape:
+        both_overflow = both_overflow[1:] if is_start1_inf else both_overflow[:-1]
+    if len(both_overflow[0]) + len(submatrix[0]) > expected_shape:
+        both_overflow = both_overflow[:, 1:] if is_start2_inf else both_overflow[:, :-1]
+
+    if (locus1["Chromosome"] not in circular) or (locus2["Chromosome"] not in circular):
+        both_overflow = np.full(both_overflow.shape, np.nan)
+
+    to_concat1 = [both_overflow, pos1_overflow_matrix] if is_start2_inf else [pos1_overflow_matrix, both_overflow]
+    pos1_overflow_matrix = np.concatenate(to_concat1, axis=1)
+    to_concat2 = [pos2_overflow_matrix, submatrix] if is_start2_inf else [submatrix, pos2_overflow_matrix]
+    pos2_overflow_matrix = np.concatenate(to_concat2, axis=1)
+    to_concat = [pos1_overflow_matrix, pos2_overflow_matrix] if is_start1_inf else [pos2_overflow_matrix, pos1_overflow_matrix]
+    submatrix = np.concatenate(to_concat, axis=0)
+
+    return submatrix 
+
 def compute_subtracks(bw_tracks, positions, window, center = 'start', circular=[]):
     """Returns a dictionnary with each position's index as key and the corresponding track on the window."""
     chrom_sizes = bw_tracks.chroms()
@@ -276,6 +384,73 @@ def compute_submatrices(cool, name, positions, binning, window, circular=[], loo
             if locus1["Chromosome"] != locus2["Chromosome"] and not trans_contact:
                 continue
             submatrix= extract_window(cool, locus1, locus2, binning, window, circular = circular, trans = trans_contact, diagonal_mask=diagonal_mask, center=center, detrend_matrix = ps_detrend, raw = raw)
+            submatrices = submatrices._append({"Loc1":i, "Loc2": j, "Matrix":submatrix.flatten()}, ignore_index=True)
+        all_submatrices[locus_name] = submatrices
+
+    return all_submatrices
+
+
+def compute_submatrices_opti(cool, name, positions, binning, window, circular=[], loops = False, min_dist=0, trans_contact=False, diagonal_mask=0, center="start", sort_contact="None", contact_range="20000:100000:30000", ps_detrend = False, compile = False, is_2d=False, raw = False):
+    locus_pairs = {}
+    tmp_locus_pairs = []
+    tmp_positions = None
+    # if 2d positions, the pairs are pre-computed
+    if is_2d:
+        tmp_positions, tmp_locus_pairs = compute_pairs2d(positions)
+    else:
+        tmp_positions = positions.copy()
+    if loops:
+        tmp_locus_pairs = np.array(list(combinations(tmp_positions.index, r=2))) if not is_2d else tmp_locus_pairs
+        tmp_locus_pairs_distances = np.array([get_dist_positions(tmp_positions, i, j, center=center) for i, j in tmp_locus_pairs])
+        match sort_contact:
+            case "none":
+                locus_pairs[name] = tmp_locus_pairs[tmp_locus_pairs_distances >= min_dist]
+
+            case "None":
+                locus_pairs[name] = tmp_locus_pairs[tmp_locus_pairs_distances >= min_dist]
+
+            case "":
+                locus_pairs[name] = tmp_locus_pairs[tmp_locus_pairs_distances >= min_dist]
+
+            case "distance":
+                contact_data = contact_range.split(':')
+                contact_min = int(contact_data[0]) if len(contact_data) == 3 else 0
+                contact_max = int(contact_data[1]) if len(contact_data) == 3 else 0
+                contact_window = int(contact_data[2]) if len(contact_data) == 3 else 0
+                tmp_locus_pairs = np.array(list(combinations(tmp_positions.index, r=2)))
+                tmp_locus_pairs_distances = [get_dist_positions(tmp_positions, i, j, center=center) for i, j in tmp_locus_pairs]
+                for k in range(contact_min, contact_max, contact_window):
+                    min_window = k
+                    max_window = k + contact_window
+                    k_indexes = [i for i in range(len(tmp_locus_pairs_distances)) if min_window <= tmp_locus_pairs_distances[i] < max_window]
+                    locus_pairs[f"{name}_{min_window//1000}-{max_window//1000}kb"] = tmp_locus_pairs[k_indexes]
+
+            case "cis_trans":
+                cis_list = []
+                trans_list = []
+                for i in range(len(tmp_positions)):
+                    for j in range(i +1, len(tmp_positions)):
+                        if get_dist_positions(tmp_positions, i, j, center=center) <= min_dist:
+                            continue
+                        if tmp_positions.iloc[i]["Chromosome"] == tmp_positions.iloc[j]["Chromosome"]:
+                            cis_list.append([i, j])
+                        else:
+                            trans_list.append([i, j])
+                locus_pairs[f"{name}_cis"] = cis_list
+                locus_pairs[f"{name}_trans"] = trans_list
+    else:
+        locus_pairs[name] = list([(i, i) for i in tmp_positions.index]) if not is_2d else tmp_locus_pairs
+
+    all_submatrices = {}
+    for locus_name in locus_pairs.keys():
+
+        submatrices = pd.DataFrame(columns=['Loc1', 'Loc2', 'Matrix'])
+        for i, j in locus_pairs[locus_name]:
+            locus1 = tmp_positions.iloc[i]
+            locus2 = tmp_positions.iloc[j]
+            if locus1["Chromosome"] != locus2["Chromosome"] and not trans_contact:
+                continue
+            submatrix= extract_window_opti(cool, locus1, locus2, binning, window, circular = circular, trans = trans_contact, diagonal_mask=diagonal_mask, center=center, detrend_matrix = ps_detrend, raw = raw)
             submatrices = submatrices._append({"Loc1":i, "Loc2": j, "Matrix":submatrix.flatten()}, ignore_index=True)
         all_submatrices[locus_name] = submatrices
 
