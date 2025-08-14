@@ -1,19 +1,30 @@
-import numpy as np
-
-import cooler
-from BCBio import GFF
+# basic librairies
 import pandas as pd
-pd.options.mode.chained_assignment = None 
 import numpy as np
-np.seterr(all="ignore")
-from itertools import combinations
-import matplotlib.pyplot as plt
-from matplotlib import gridspec as grid
-from chromosight.utils.preprocessing import distance_law
-import pyBigWig
-from matplotlib import colormaps
-from shutil import rmtree
 
+# tools
+from itertools import combinations
+
+# ploting
+from matplotlib import gridspec as grid
+from matplotlib import colormaps
+import matplotlib.pyplot as plt
+
+# system
+from shutil import rmtree
 import datetime
 import sys
 import os
+
+# multiprocessing
+from multiprocessing import cpu_count
+
+# biological data 
+from chromosight.utils.preprocessing import distance_law # TODO copy the method with reference to avoid costly importation
+from BCBio import GFF
+import pyBigWig
+import cooler
+
+# errors managment
+pd.options.mode.chained_assignment = None 
+np.seterr(all="ignore")
