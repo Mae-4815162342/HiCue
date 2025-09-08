@@ -439,7 +439,9 @@ def tracks(cool_files, tracks, outpath, params, log = None):
                             mean_value = bw_tracks.header()['sumData']/bw_tracks.header()['nBasesCovered']
                             track_pileup = track_pileup / mean_value
                             track_unit_title = f"{track_unit}\n(detrended by global mean)"
-
+                        else:
+                            track_unit_title = f"{track_unit}\n(not detrended)"
+                        
                         display_strand_specified = flip and (not loops)
                         display_pileup(pileup, window, track_pileup=track_pileup, cmap=cmap, cmap_color=cmap_color, title=title, track_title=track_title, outpath=pileup_outpath, output_format=output_format, display_strand=display_strand_specified, display_sense=display_sense, is_contact=loops, track_label=f"{method}\n{track_unit_title}", binning = bins)
 
