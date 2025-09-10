@@ -1,6 +1,6 @@
 from .cli.imports import *
 
-def extract_window(cool, locus1, locus2, binning, window, circular=[], trans=False, diagonal_mask=0, center="start", detrend_matrix = False, raw = False):
+def extract_window(cool, locus1, locus2, binning, window, circular=[], trans=False, diagonal_mask=0, center="start", detrend_matrix = False, raw = False): # TODO: deal with detrending and masking at an upper level. Add flip though
     """Extracts a window from a matix given positions and parameters."""
     matrix = cool.matrix(balance=(not raw))
 
@@ -165,3 +165,16 @@ def detrend_submatrix(submatrix, locus1, locus2, binning, ps, center="start"):
 
     submatrix_det = submatrix / ps[submatrix_index]
     return submatrix_det
+
+def empty_queue_in_dict(queue, key):
+        """Empties a dict queue in a dict, using key as the dict element key."""
+        queue_dict = {}
+        while True:
+            try:
+                value = queue.get(timeout = 10)
+            except Empty:
+                break
+            if value == "DONE":
+                break
+            queue_dict[value[key]] = value
+        return queue_dict

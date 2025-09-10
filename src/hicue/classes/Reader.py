@@ -14,21 +14,6 @@ class Reader():
         if len(self._save_to) > 0: # TODO write all outputs with asynchronous functions
             if not os.path.exists(self._save_to):
                 os.mkdir(self._save_to)
-        
-    @staticmethod
-    def position_queue_to_df(position_queue):
-        """Converts a position_queue output to a dataframe."""
-        position_list = []
-        index_list = []
-        while True:
-            value = position_queue.get()
-            if value == "DONE":
-                break
-            index, position = value
-            index_list.append(index)
-            position_list.append(position)
-        
-        return pd.DataFrame(position_list, index = index_list)
     
     @staticmethod
     def open_tracks(track_path):
@@ -98,7 +83,7 @@ class Reader():
 
         join_queues([position_queue, pairing_queue], threads=threads)
         
-        positions = self.position_queue_to_df(position_queue)
+        positions = position_queue_to_df(position_queue)
         if save_to:
             positions.to_csv(f"{save_to}/positions_indexed.csv", sep=",")
 

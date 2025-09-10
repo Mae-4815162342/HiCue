@@ -1,4 +1,4 @@
-from hicue.utils_opti import *
+from hicue.workers.utils import *
 
 # testing extract_matrix
 matrix_path = "test_data/matrices/Control.mcool"
@@ -52,7 +52,7 @@ for res in resolutions:
             sub_center = extract_window(cool_file, pos1, pos2, res, window, center="center")
             sub_end = extract_window(cool_file, pos1, pos2, res, window, center="end")
             sub_raw = extract_window(cool_file, pos1, pos2, res, window, raw=True)
-            sub_circ = extract_window(cool_file, pos1, pos2, res, window, circular=[chromosome])
+            sub_circ = extract_window(cool_file, pos1, pos2, res, window, is_loc1_circ= True, is_loc2_circ= True)
             
             assert(sub.shape[0] == expected_size)            
             assert(sub.shape[1] == expected_size)

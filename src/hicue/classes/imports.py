@@ -9,9 +9,12 @@ import sys
 import os
 
 # threading & multiprocessing
-from multiprocessing import Queue
-from queue import Empty
+from multiprocessing import SimpleQueue
+from multiprocessing import Queue as MultiQueue
+from multiprocessing import Process
+from queue import Queue, Empty
 import threading
+import asyncio
 
 # biological data
 from BCBio import GFF

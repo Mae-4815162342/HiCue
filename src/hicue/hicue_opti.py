@@ -1,50 +1,52 @@
 from .utils_opti import *
 from .classes.Reader import *
 from .classes.PairFormater import *
+from .classes.RandomSelector import *
+from .classes.MatrixExtractorLauncher import *
+from .classes.AsyncDisplays import *
 
-def extract_opti(cool_files, positions, outpath, log = None, **params):
+def extract(cool_files, positions, outpath, log = None, **params):
 
     if not os.path.exists(outpath):
         os.mkdir(outpath)
 
-    # parsing parameters
+    format_params = {
+        "separate_by" : params["separate_by"],
+        "center" : params["center"],
+        "contact_range" : params["contact_range"],
+        "separate_regions" : params["separation_regions"],
+        "min_dist" : params['min_dist'],
+        "detrending": params['detrending'],
+        "diag_mask": params['diag_mask'],
+        "overlap": params['overlap'],
+        "has_trans": params["trans"],
+        "circulars": params['circulars']
+    }
 
-    ## used
-    # loops = params['loops']
-    # min_dist = params['min_dist']
-    # separate_by = params["separate_by"]
-    # separate_regions = params["separation_regions"]
-    # overlap = params["overlap"]
-    # contact_separation = params["contact_separation"]
-    # contact_range = params["contact_range"]
-    # has_trans = params['trans']
-    # center = params["center"]
+    display_args = {
+        "output_format": params["format"],
+        "display_strand" : params["display_strand"], 
+        "display_sense" : params["display_sense"],
+        "cmap": params["indiv_cmap_limits"],
+        "color": params["indiv_cmap_color"]
+    }
 
-    ## passed
-    # ps_detrending = params["detrending"] == "ps"
+    random_params = {
+        "center" : params["center"],
+        "selection_window": params['rand_max_dist'],
+        "nb_rand_per_pos" : params['nb_pos']
+    }
 
-    # circular_chromosomes = params['circular_chromosomes']
-
-
-    # windows = params['windows']
-    # detrending = params['detrending']
-    # nb_pos = params['nb_pos']
-    # max_dist = params['random_max_dist']
-    # raw = params['raw']
-    # diagonal_mask = params['diagonal_mask']
-    # display_strand = params['display_strand']
-    # output_format = params['output_formats']
-    # compute_pileup = params['pileup']
-    # plot_loci = params['loci']
-    # method = params['method']
-    # flip = params['flip']
-    # cmap = params['cmap_pileup']
-    # cmap_color = params['cmap_color']
-    # display_sense = params['display_sense']
+    pileup_display_args = {
+        "output_format": params["format"],
+        "display_strand" : params["display_strand"], 
+        "display_sense" : params["display_sense"],
+        "cmap": params["cmap_limits"],
+        "cmap_color": params["cmap_color"]
+    }
 
     # checking multiprocessing values
     threads = max(1, params["threads"])
-    cpus = max(1, min(params["cpu"], cpu_count() - 1)) # allocates the required CPUs without overflowing the machine cores
 
     # reading parameters
     pos_type, pos_file = positions
@@ -61,111 +63,56 @@ def extract_opti(cool_files, positions, outpath, log = None, **params):
     positions, pairing_queue = reader.read_file(threads = threads)
 
     ## Formating indexes pairs
-    format_params = {
-        "separate_by" : params["separate_by"],
-        "center" : params["center"],
-        "contact_range" : params["contact_range"],
-        "separate_regions" : params["separation_regions"],
-        "min_dist" : params['min_dist'],
-        "detrending": params['detrending'],
-        "diag_mask": params['diag_mask'],
-        "overlap": params['overlap'],
-        "has_trans": params["trans"],
-        "circulars": params['circulars']
-    }
     formater = PairFormater(positions, **format_params)
     formated_pairs = formater.format_pairs(pairing_queue, threads = threads)
 
-    print(formated_pairs.head())
+    if params["save_tmp"]:
+        positions.to_csv(f"{outpath}/{data_title}_positions.csv")
+        formated_pairs.to_csv(f"{outpath}/{data_title}_formated_pairs.csv")
+
+    ## Random locus selection (for patch only) from positions
+    random_selection = None
+    if params['detrending'] == "patch" and params["pileup"]:
+        selector = RandomSelector(**random_params)
+        random_selection = selector.select_randoms(positions, threads = threads)
+
+        if params["save_tmp"]:
+            random_selection.to_csv(f"{outpath}/{data_title}_random_patch.csv") # TODO: add method to re-use randoms for reproducibility
     
+    ## Matrix extraction
+    matrix_extractor = MatrixExtractorLauncher(cool_files,
+                                               compute_pileups = params["pileup"],
+                                               binnings = params["binnings"], 
+                                               windows = params["windows"],
+                                               center = params["center"], 
+                                               raw = params["raw"], 
+                                               method = params["method"], 
+                                               flip = params["flip"],
+                                               nb_rand_per_pos = params["nb_pos"],
+                                               display_loci = params["loci"],
+                                               outpath = outpath,
+                                               display_args = display_args,
+                                               log = log)
+    
+    pileups = matrix_extractor.launch_extraction(positions, formated_pairs, threads=threads)
 
+    if params["pileup"]:
+        pileups_random = {}
+        if params['detrending'] == "patch":
+            pileups_random_queue = matrix_extractor.launch_extraction(random_selection, formated_pairs, randoms = True, threads=threads)
+            pileups_random = empty_queue_in_dict(pileups_random_queue, key = "sep_id") # exporting the patch detrending as an dict for access
 
-    # random_locus = []
-    # for position_name, positions in selected_positions.items():
-    #     for cool_path in cool_files:
-    #         cool = cooler.Cooler(cool_path)
-    #         bins = cool.binsize
-    #         if detrending == "patch":
-    #             random_locus = get_random_from_locus(cool, positions_parsed, nb_pos=nb_pos, max_dist=max_dist) if len(random_locus) == 0 else random_locus
-
-    #         matrix_outfolder = f"{outpath}/{cool.filename.split('/')[-1].split('.')[0]}"
-    #         if not os.path.exists(matrix_outfolder):
-    #             os.mkdir(matrix_outfolder)
-
-
-    #         for window in windows:
-    #             outfolder = f"{matrix_outfolder}/window_{window//1000}kb"
-    #             if not os.path.exists(outfolder):
-    #                 os.mkdir(outfolder)
-
-    #             # retrieving submatrices
-    #             submatrices = compute_submatrices_opti(cool, 
-    #                                               position_name, 
-    #                                               positions, 
-    #                                               bins, 
-    #                                               window, 
-    #                                               loops=loops, 
-    #                                               min_dist=min_dist,
-    #                                               circular=circular_chromosomes, 
-    #                                               trans_contact=trans_contact, 
-    #                                               diagonal_mask=diagonal_mask, 
-    #                                               center=center, 
-    #                                               sort_contact=contact_separation, 
-    #                                               contact_range = contact_range,
-    #                                               ps_detrend = ps_detrending,
-    #                                               raw=raw)
-
-    #             if detrending == "patch":
-    #                 random_submatrices = compute_submatrices_opti(cool, 
-    #                                                         position_name, 
-    #                                                         random_locus, 
-    #                                                         bins, 
-    #                                                         window, 
-    #                                                         loops=loops, 
-    #                                                         min_dist=min_dist,
-    #                                                         circular=circular_chromosomes, 
-    #                                                         trans_contact=False, 
-    #                                                         center = center, 
-    #                                                         sort_contact=contact_separation, 
-    #                                                         contact_range = contact_range,
-    #                                                         raw=raw)
-                 
-    #             for name in submatrices.keys():
-    #                 if len(submatrices[name]) == 0:
-    #                     continue
-    #                 # displaying submatrices
-    #                 if plot_loci:
-    #                     display_submatrices(submatrices[name], positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense, binning = bins)
-    #                 display_all_submatrices(submatrices[name], positions, window, outfolder=outfolder + f"/{name}", circular=circular_chromosomes, chromsizes = cool.chromsizes, output_format=output_format, display_strand=display_strand, display_sense=display_sense, binning = bins)
-                    
-    #                 # computing pileup
-    #                 if compute_pileup:
-    #                     ## aggregating the matrices
-    #                     pileup_matrices = get_windows(submatrices[name], positions, flip)
-    #                     match method:
-    #                         case "median":
-    #                             pileup = np.apply_along_axis(np.nanmedian, 0, pileup_matrices)
-    #                         case "mean":
-    #                             pileup = np.apply_along_axis(np.nanmean, 0, pileup_matrices)
-
-    #                     ## detrending
-    #                     if name[-len("trans"):] != "trans":
-    #                         match detrending:
-    #                             case "patch":
-    #                                 if nb_pos >= 1:
-    #                                     random_pileup_matrices = get_windows(random_submatrices[name], random_locus, flip)
-    #                                     match method:
-    #                                         case "median":
-    #                                             pileup_null = np.apply_along_axis(np.nanmedian, 0, random_pileup_matrices)
-    #                                         case "mean":
-    #                                             pileup_null = np.apply_along_axis(np.nanmean, 0, random_pileup_matrices)
-    #                                     pileup = pileup / pileup_null
-                        
-    #                     title = f"{name.replace('_', ' ')} pileup ({len(pileup_matrices)} matrices)"
-    #                     pileup_outpath = f"{outfolder}/{name}_pileup" if len(outfolder) > 0 else ""
-    #                     if len(pileup_outpath) > 0:
-    #                         if not os.path.exists(f"{outfolder}/matrices_tables"):
-    #                             os.mkdir(f"{outfolder}/matrices_tables")
-    #                         size = int(np.sqrt(len(pileup)))
-    #                         pd.DataFrame(pileup.reshape((size, size))).to_csv(f"{outfolder}/matrices_tables/{name}_pileup.csv")
-    #                     display_pileup(pileup, window, cmap=cmap, cmap_color=cmap_color, title=title, outpath=pileup_outpath, output_format=output_format, display_strand=flip, display_sense=display_sense, binning = bins)
+        ## Pileup detrending and display
+        pileup_display = Display(
+            input_queue = pileups,
+            output_queues = [],
+            function = display_pileup,
+            patch_detrending = pileups_random,
+            outpath = outpath,
+            title = data_title,
+            windows = params["windows"],
+            is_contact = (pos_type == "bed2d" or params["loops"]),
+            **pileup_display_args
+        )
+        pileup_display.join()
+        

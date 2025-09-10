@@ -5,7 +5,9 @@ import numpy as np
 # tools
 from itertools import combinations
 
-# ploting
+# plotting
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import gridspec as grid
 from matplotlib import colormaps
 import matplotlib.pyplot as plt
@@ -13,11 +15,12 @@ import matplotlib.pyplot as plt
 # system
 from shutil import rmtree
 import datetime
+import time
 import sys
 import os
 
 # multiprocessing
-from multiprocessing import cpu_count
+from queue import Empty
 
 # biological data 
 from chromosight.utils.preprocessing import distance_law # TODO copy the method with reference to avoid costly importation
