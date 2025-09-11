@@ -13,14 +13,20 @@ class coolType(click.ParamType):
             return cooler.fileops.is_cooler(file)
         except:
             return False
+        
+    def is_mcool(self, file):
+        try:
+            return cooler.fileops.is_multires_file(file)
+        except:
+            return False
 
     def convert(self, value, param, ctx):
-        if self.is_cool(value):
+        if self.is_cool(value) or self.is_mcool(file):
             return [value]
         if not os.path.isfile(value):
             files = value.split(',')
             for file in files:
-                if not self.is_cool(file):
+                if not self.is_cool(file) or not self.is_mcool(file):
                     self.fail(f"{file} is not a valid cool file", param, ctx)
             return files
         else:
@@ -28,7 +34,7 @@ class coolType(click.ParamType):
             with open(value, 'r') as f:
                 for line in f.readlines():
                     file = line.replace('\n', '').replace(' ', '')
-                    if not self.is_cool(file):
+                    if not self.is_cool(file) or not self.is_mcool(file):
                         self.fail(f"{file} is not a valid cool file", param, ctx)
                     else:
                         files.append(file)
@@ -110,23 +116,14 @@ class PositionFileType(click.ParamType):
 
     #  accepts bed and gff files. Returns a tuple indicating the type and path of the file
     def convert(self, value, param, ctx):
-        if value == '.':
-            return 'global', value
+        """Accepts gff, bed and bed2d files."""
         if not os.path.isfile(value):
             self.fail(f"{value} is not an existing file.")
-        try:
-            in_handle = open(value)
-            recs = GFF.parse(in_handle)
-            if len(list(recs)) == 0:
-                raise Exception
-            return 'gff', value
-        except:
-            try:
-                bed = parse_bed_file(value)
-                return 'bed', value
-            except Exception as e:
+        extension = value.split('.')[-1].lower()
+        if extension not in ["gff", "bed", "bed2d"]:
                 self.fail(f"{value} is not an valid position file (gff or bed format expected) : {e}")
-
+        return extension, value
+    
 class Position2dFileType(click.ParamType):
     name="position file"
 

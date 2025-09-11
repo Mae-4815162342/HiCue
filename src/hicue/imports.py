@@ -1,0 +1,2 @@
+ARROW_LEFT = "←"
+ARROW_RIGHT = "→"

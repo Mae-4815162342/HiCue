@@ -69,4 +69,6 @@ docs/_build/
 .Trashes
 ehthumbs.db
 Thumbs.db
-__pycache__
+*/__pycache__
+
+test_out

@@ -210,7 +210,7 @@ def display_pileup(pileup, window, track_pileup=[], cmap=None, cmap_color="seism
             transcription_sens = ARROW_LEFT if display_sense == "reverse" else ARROW_RIGHT
             arrow_alignment = "right" if display_sense == "reverse" else "left"
             to = -window//1000 * 1.2 if display_sense == "reverse" else window//1000 * 1.2
-            plt.text(0, to, horizontalalignment=arrow_alignment, fontsize=20)
+            plt.text(0, to, transcription_sens, horizontalalignment=arrow_alignment, fontsize=20)
 
     else:
         width = 3 if is_contact else 2
@@ -349,26 +349,33 @@ def display_compare(matrix1, matrix2, mat_name1, mat_name2, binning, window, pos
     # plotting matrices
     opti_vmin, opti_vmax = opti_limits([np.log10(matrix1), np.log10(matrix2)])
     cmap_submat = [opti_vmin, opti_vmax] if cmap == None else cmap
+
+    # centering log ratio on 0
+    log_ratio = np.log2(matrix1/ matrix2)
+    log_ratio[np.isinf(log_ratio)] = np.nan
+    vmin, vmax = np.nanmin(log_ratio), np.nanmax(log_ratio)
+    cmap_ratio = np.max([abs(vmin), abs(vmax)])
+
     if not is_pileup:
         if not is_global:
             plot_map(ax_mat1, matrix1, pos1, secondary_pos, window, positions, chromsizes=chromsizes, show_title=False, display_sense=display_sense, display_strand=display_strand, circular=circular, cmap=cmap_submat)
             im_matrix = plot_map(ax_mat2, matrix2, pos1, secondary_pos, window, positions, chromsizes=chromsizes, show_title=False, display_sense=display_sense, display_strand=display_strand, circular=circular, cmap=cmap_submat)
-            im_ratio = plot_map(ax_ratio, np.log2(matrix1/ matrix2), pos1, secondary_pos, window, positions, chromsizes=chromsizes, show_title=False, display_sense=display_sense, display_strand=display_strand, circular=circular, log=False, color = "bwr")
+            im_ratio = plot_map(ax_ratio, log_ratio, pos1, secondary_pos, window, positions, chromsizes=chromsizes, show_title=False, display_sense=display_sense, display_strand=display_strand, circular=circular, log=False, color = "bwr", cmap=[-cmap_ratio, cmap_ratio])
         else:
             plot_global_map(ax_mat1, matrix1, chromsizes, display_sense=display_sense)
             im_matrix = plot_global_map(ax_mat2, matrix2, chromsizes, display_sense=display_sense)
-            im_ratio = plot_global_map(ax_ratio, np.log2(matrix1/ matrix2), chromsizes, display_sense=display_sense, log=False, color = "bwr")
+            im_ratio = plot_global_map(ax_ratio, log_ratio, chromsizes, display_sense=display_sense, log=False, color = "bwr")
 
     else:
         match display_sense:
             case "forward":
                 ax_mat1.imshow(np.log10(matrix1), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap=cmap_color, vmin=cmap_submat[0], vmax=cmap_submat[1])
                 im_matrix = ax_mat2.imshow(np.log10(matrix2), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap=cmap_color, vmin=cmap_submat[0], vmax=cmap_submat[1])
-                im_ratio = ax_ratio.imshow(np.log2(matrix1/ matrix2), extent=[-window//1000, window//1000, window//1000, -window//1000], cmap="viridis")
+                im_ratio = ax_ratio.imshow(log_ratio, extent=[-window//1000, window//1000, window//1000, -window//1000], cmap="bwr", vmin=-cmap_ratio, vmax=cmap_ratio)
             case "reverse":
                 ax_mat1.imshow(np.log10(matrix1), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap=cmap_color, vmin=cmap_submat[0], vmax=cmap_submat[1])
                 im_matrix = ax_mat2.imshow(np.log10(matrix2), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap=cmap_color, vmin=cmap_submat[0], vmax=cmap_submat[1])
-                im_ratio = ax_ratio.imshow(np.log2(matrix1/ matrix2), extent=[window//1000, -window//1000, -window//1000, window//1000], cmap="viridis")
+                im_ratio = ax_ratio.imshow(log_ratio, extent=[window//1000, -window//1000, -window//1000, window//1000], cmap="bwr", vmin=-cmap_ratio, vmax=cmap_ratio)
 
         if display_strand:
             transcription_sens = ARROW_LEFT if display_sense == "reverse" else ARROW_RIGHT

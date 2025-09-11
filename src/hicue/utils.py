@@ -215,7 +215,7 @@ def compute_pairs2d(positions):
         index_pairs.append((i * 2, i * 2 + 1))
     return tmp_positions, index_pairs
 
-def compute_submatrices(cool, name, positions, binning, window, circular=[], loops = False, min_dist=0, trans_contact=False, diagonal_mask=0, center="start", sort_contact="None", contact_range="20000:100000:30000", ps_detrend = False, compile = False, is_2d=False, raw = False):
+def compute_submatrices(cool, name, positions, binning, window, circular=[], loops = False, min_dist=0, trans_contact=False, diagonal_mask=0, center="start", sort_contact="None", contact_range="20000:100000:30000", ps_detrend = False, is_2d=False, raw = False):
     locus_pairs = {}
     tmp_locus_pairs = []
     tmp_positions = None
