@@ -28,7 +28,8 @@ class MatrixExtractorScheduler(threading.Thread):
                     queue.put({
                         "pileup":pileups[sep_id],
                         "binning": cool_file.binsize,
-                        "sep_id": sep_id
+                        "sep_id": sep_id,
+                        "cool_name": cool_name
                     })
 
 class MatrixExtractor():
@@ -69,6 +70,8 @@ class MatrixExtractor():
         unique_sep_ids = np.unique(self._formated_pairs["Sep_id"])
 
         # for each separation create a pileup
+        nb_matrices = len(self._formated_pairs) if not self._randoms else len(self._formated_pairs) * self._nb_rand_per_pos
+        pileups = {sep_id : Pileup(nb_matrices = nb_matrices, sep_id = sep_id, mode = self._method, cool_name = cool_name, binning = cool_file.binsize) for sep_id in unique_sep_ids}
         nb_matrices = len(self._formated_pairs) if not self._randoms else len(self._formated_pairs) * self._nb_rand_per_pos
         pileups = {sep_id : Pileup(nb_matrices = nb_matrices, sep_id = sep_id, mode = self._method, cool_name = cool_name, binning = cool_file.binsize) for sep_id in unique_sep_ids}
             

@@ -134,6 +134,6 @@ class SubmatrixFormater():
         if bool(pair["Ps"]):
             result_matrix = self.detrend(result_matrix, locus1, locus2, is_trans = pair["Trans"])
         # flipping if required and on diagonal
-        if self._flip and pair['Locus1'] == pair['Locus2'] and self._positions.loc[pair['Locus1']]['Strand'] < 0:
+        if self._flip and pair['Locus1'] == pair['Locus2'] and self._positions.loc[pair['Locus1']]['Strand'] == 1:
             np.flip(result_matrix)
         return result_matrix

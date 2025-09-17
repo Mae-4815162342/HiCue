@@ -6,11 +6,13 @@ def create_folder_path(path):
     """If a folder path does not exists, create all the dependencies to this path."""
     global path_lock
     path_list = path.split("/")
+    to_add = ""
     if path_list[0] == "":
         path_list = path_list[1:]
+        to_add = "/"
     with path_lock:
         for i in range(1, len(path_list) + 1):
-            current_path = "/".join(path_list[:i])
+            current_path = to_add + "/".join(path_list[:i])
             if not os.path.exists(current_path):
                 os.mkdir(current_path)
 
@@ -35,9 +37,10 @@ def adjust_extents(ax, chrom1, chrom2, is_chrom1_circ, is_chrom2_circ, chromsize
             extent_y[i] = str(int(extent_y[i]) - chromsizes[chrom1]//1000) if is_chrom1_circ else " "
     ax.set(yticks=y_ticks, yticklabels=extent_y)
 
-def plot_map(ax, matrix, loc1, loc2, window, locus1, locus2, is_chrom1_circ, is_chrom2_circ, title="", display_sense="forward", chromsizes={}, display_strand=False, strand_level=1.2, cmap=None, color="afmhot_r", adjust=True, show_title=True, log=True):
+def plot_map(ax, matrix, loc1, loc2, window, locus1, locus2, is_chrom1_circ, is_chrom2_circ, title="", display_sense="forward", chromsizes={}, display_strand=False, flipped = False, strand_level=1.2, cmap=None, color="afmhot_r", adjust=True, show_title=True, log=True):
     """Plots a single matrix on the provided axis"""
     is_contact = loc1 != loc2
+    flipped_pos = locus1["Strand"] == -1 and flipped
     strand = not is_contact and locus1["Strand"] == -1
     pos1 = min(locus1["Start"], locus1["End"]) if locus1["Strand"] == 1 else max(locus1["Start"], locus1["End"])
     pos2 = min(locus2["Start"], locus2["End"]) if locus2["Strand"] == 1 else max(locus2["Start"], locus2["End"])
@@ -51,6 +54,9 @@ def plot_map(ax, matrix, loc1, loc2, window, locus1, locus2, is_chrom1_circ, is_
         display_matrix = np.log10(matrix) if log else matrix
     vmin = cmap[0] if cmap != None else None
     vmax = cmap[1] if cmap != None else None
+
+    if flipped_pos:
+        display_matrix = np.flip(display_matrix)
 
     match display_sense:
         case "forward":
@@ -76,7 +82,7 @@ def plot_map(ax, matrix, loc1, loc2, window, locus1, locus2, is_chrom1_circ, is_
         ax.text(pos2//1000, pos_up, transcription_sens, horizontalalignment=arrow_alignment, fontsize=20)
     return mat
 
-async def display_submatrix(matrix, pair, window, binning = 1000, outfolder="", positions = None, output_format=['pdf'], chromsizes = {}, display_strand=False, display_sense="forward", cmap = None, color = "afmhot_r", tracks = None, track_label = ""):
+async def display_submatrix(matrix, pair, window, binning = 1000, outfolder="", positions = None, output_format=['pdf'], chromsizes = {}, display_strand=False, flipped = False, display_sense="forward", cmap = None, color = "afmhot_r", tracks = None, track_label = ""):
         """Displays a single submatrix for a pair of positions."""
 
         # checking outpath
@@ -95,7 +101,7 @@ async def display_submatrix(matrix, pair, window, binning = 1000, outfolder="", 
 
             plt.figure(figsize=(6,6))
 
-            mat = plot_map(plt.gca(), matrix, i, j, window, pos1, pos2, pair["Chrom1_circular"], pair["Chrom2_circular"], title=title, chromsizes = chromsizes, display_sense=display_sense, display_strand=display_strand, strand_level=1.2, cmap=cmap, color=color)
+            mat = plot_map(plt.gca(), matrix, i, j, window, pos1, pos2, pair["Chrom1_circular"], pair["Chrom2_circular"], title=title, chromsizes = chromsizes, display_sense=display_sense, display_strand=display_strand, flipped = flipped, strand_level=1.2, cmap=cmap, color=color)
 
             plt.colorbar(mat, fraction=0.01)
             plot_xlabel =  "\n" + f"{pos2['Chromosome']} Genomic coordinates (in kb)"
@@ -118,7 +124,7 @@ async def display_submatrix(matrix, pair, window, binning = 1000, outfolder="", 
 
             # matrix ax
             ax = plt.subplot(gs[:4, 0])
-            mat = plot_map(ax, matrix, i, j, window, pos1, pos2, pair["Chrom1_circular"], pair["Chrom2_circular"], title=title, show_title=(not is_contact), chromsizes = chromsizes, display_sense=display_sense, display_strand=display_strand, strand_level=1.2, adjust=False, cmap=cmap, color=color)
+            mat = plot_map(ax, matrix, i, j, window, pos1, pos2, pair["Chrom1_circular"], pair["Chrom2_circular"], title=title, show_title=(not is_contact), chromsizes = chromsizes, display_sense=display_sense, display_strand=display_strand, flipped=flipped, strand_level=1.2, adjust=False, cmap=cmap, color=color)
 
             # colorbar ax
             ax_cb = plt.subplot(gs[1, width - 1])
@@ -163,7 +169,7 @@ async def display_submatrix(matrix, pair, window, binning = 1000, outfolder="", 
                 plt.savefig(outpath + f".{format}", bbox_inches="tight")
         plt.close()
 
-async def display_batch_submatrices(submatrices, positions, window, title = "", batch_size = 64, outfolder="", output_format=['pdf'], circular=[], chromsizes = [], display_strand=False, display_sense="forward", cmap=None, color="afmhot_r"):
+async def display_batch_submatrices(submatrices, positions, window, title = "", batch_size = 64, outfolder="", output_format=['pdf'], circular=[], chromsizes = [], display_strand=False, flipped = False, display_sense="forward", cmap=None, color="afmhot_r"):
     """Displays a batch of submatrices in a single figure. References each submatrix in a csv file."""
     # checking outpath
     batched_outfolder = f"{outfolder}/batched_{window//1000}kb_window"
@@ -195,7 +201,7 @@ async def display_batch_submatrices(submatrices, positions, window, title = "", 
         index.append([map_title, name])
         
         ax = plt.subplot(gs[i, j])
-        plot_map(ax, matrix, loc1, loc2, window, pos1, pos2, is_chrom1_circ, is_chrom2_circ, title=map_title, display_sense=display_sense, chromsizes = chromsizes, display_strand=display_strand, strand_level=1.6, cmap=cmap, color=color)
+        plot_map(ax, matrix, loc1, loc2, window, pos1, pos2, is_chrom1_circ, is_chrom2_circ, title=map_title, display_sense=display_sense, chromsizes = chromsizes, display_strand=display_strand, flipped = flipped, strand_level=1.6, cmap=cmap, color=color)
 
         if i == rows - 1 or i >= nb_matrices // rows:
             ax.set_xlabel('\nGenomic coordinates in kb')
@@ -211,7 +217,7 @@ async def display_batch_submatrices(submatrices, positions, window, title = "", 
 
     plt.close()
 
-async def display_pileup(pileup, sep_id, patch_detrending = {}, windows = [], binning = 1000, track_pileup=[], cmap=None, cmap_color="seismic", title="", track_title="", outpath="", output_format=['.pdf'], display_strand=True, display_sense="forward", is_contact = False, track_label="Average Track"):
+async def display_pileup(pileup, sep_id, cool_name = "", patch_detrending = {}, windows = [], binning = 1000, track_pileup=[], cmap=None, cmap_color="seismic", title="", track_title="", outpath="", output_format=['.pdf'], display_strand=True, flipped = False, display_sense="forward", is_contact = False, track_label="Average Track"):
     """Displays a pileup with or without tracks."""
     vmin = None if cmap == None else cmap[0]
     vmax = None if cmap == None else cmap[1]
@@ -223,10 +229,11 @@ async def display_pileup(pileup, sep_id, patch_detrending = {}, windows = [], bi
 
     for window in windows:
         pileup_matrix = pileup.get_matrix(window)
+
         # applying patch detrending
-        
-        if sep_id in patch_detrending:
-            detrending = patch_detrending[f"{sep_id}_{binning}"]["pileup"].get_matrix(window)
+        identificator = f"{sep_id}_{binning}_{cool_name}"
+        if identificator in patch_detrending:
+            detrending = patch_detrending[identificator]["pileup"].get_matrix(window)
             pileup_matrix = pileup_matrix / detrending
         
         pileup_title = f"{title} pileup in {pileup.get_cool_name()} \n ({pileup.get_nb_matrices(window)} matrices)"

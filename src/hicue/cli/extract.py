@@ -65,6 +65,6 @@ def extract(ctx, outpath, positions, cool_files, **params):
         
         end_time = time.time()
 
-        log.write(f"Total time: {end_time - start_time}")
+        log.write(f"Total time: {end_time - start_time} seconds ({(end_time - start_time)/60} min)")
         if log != None:
                 log.close()

@@ -27,6 +27,7 @@ def extract(cool_files, positions, outpath, log = None, **params):
         "output_format": params["format"],
         "display_strand" : params["display_strand"], 
         "display_sense" : params["display_sense"],
+        "flipped": params["flip"],
         "cmap": params["indiv_cmap_limits"],
         "color": params["indiv_cmap_color"]
     }
@@ -41,6 +42,7 @@ def extract(cool_files, positions, outpath, log = None, **params):
         "output_format": params["format"],
         "display_strand" : params["display_strand"], 
         "display_sense" : params["display_sense"],
+        "flipped": params["flip"],
         "cmap": params["cmap_limits"],
         "cmap_color": params["cmap_color"]
     }
@@ -102,7 +104,7 @@ def extract(cool_files, positions, outpath, log = None, **params):
         pileups_random = {}
         if params['detrending'] == "patch":
             pileups_random_queue = matrix_extractor.launch_extraction(random_selection, formated_pairs, randoms = True, threads=threads)
-            pileups_random = empty_queue_in_dict(pileups_random_queue, keys = ["sep_id", "binning"]) # exporting the patch detrending as an dict for access
+            pileups_random = empty_queue_in_dict(pileups_random_queue, keys = ["sep_id", "binning", "cool_name"]) # exporting the patch detrending as an dict for access
 
         ## Pileup detrending and display
         # seems to crash after here
