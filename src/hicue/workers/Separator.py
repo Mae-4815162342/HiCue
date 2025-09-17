@@ -18,7 +18,7 @@ class SeparatorScheduler(threading.Thread):
         separator = Separator(**self._separgs)
         while True:
             try:
-                val = self._input_queue.get(timeout=10)
+                val = self._input_queue.get()
             except Empty:
                 break
             if val == 'DONE':

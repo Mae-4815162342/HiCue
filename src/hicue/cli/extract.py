@@ -30,6 +30,7 @@ import hicue.hicue_opti as h
 @click.option('--diag_mask', type=int, default=0, help="Distance from the diagonal in bp to which the matrix are set to NaN. Is applied only if superior to the bin size. Default value: 0")
 @click.option('--pileup/--no-pileup', default=True, help="Compute and display pileups.")
 @click.option('--loci/--no-loci', default=False, help="Display single loci as individual figures.")
+@click.option('--batch/--no-batch', default=False, help="Display batched loci figures.")
 @click.option('--display_strand', is_flag=True, help="Display strands on the single matrices and pileup. Requires the strand annotation of provided positions.")
 @click.option('--cmap_limits', type=(float, float), help="Min and Max value for matrix display. Usage: --cmap_limits MIN MAX.")
 @click.option('--indiv_cmap_limits', type=(float, float), help="Min and Max value for matrix display. Usage: --cmap_limits MIN MAX.")

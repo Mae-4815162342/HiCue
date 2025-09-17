@@ -30,9 +30,10 @@ class SubmatrixFormaterScheduler(threading.Thread):
 
     def run(self):
         formater = SubmatrixFormater(**self._subfargs)
+        start = time.time()
         while True:
             try:
-                val = self._input_queue.get(timeout = 10)
+                val = self._input_queue.get()
             except Empty:
                 break
             if val == 'DONE':
@@ -40,6 +41,9 @@ class SubmatrixFormaterScheduler(threading.Thread):
 
             index, window, pair, submatrix = val
             formated_submatrix = formater.format(submatrix, pair)
+
+            if index % 1000 == 0:
+                print(index, time.time() - start)
 
             for queue in self._output_queues:
                 queue.put((index, window, pair["Sep_id"], formated_submatrix))

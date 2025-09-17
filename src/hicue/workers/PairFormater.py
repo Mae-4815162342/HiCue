@@ -2,13 +2,16 @@ from .imports import *
 
 # global parameters
 global pair_id
+global pairs
 
 pair_lock = threading.Lock()
 
 def initialize_globals():
     with pair_lock:
         global pair_id
+        global pairs
         pair_id = 0
+        pairs = set()
 
 class PairFormaterScheduler(threading.Thread):
     def __init__(self, input_queue, output_queue, **pargs):
@@ -25,7 +28,7 @@ class PairFormaterScheduler(threading.Thread):
         pair_formater = PairFormater(**self._pargs)
         while True:
             try:
-                val = self._input_queue.get(timeout=10)
+                val = self._input_queue.get()
             except Empty:
                 break
             if val == 'DONE':
@@ -35,7 +38,8 @@ class PairFormaterScheduler(threading.Thread):
             index, formated_pair = pair_formater.format(i, j, distance, circ1, circ2, sep_id)
 
             for output_queue in self._output_queues:
-                output_queue.put((index, formated_pair))
+                if formated_pair is not None:
+                    output_queue.put((index, formated_pair))
             
 class PairFormater():
     def __init__(self, detrending, diag_mask):
@@ -59,8 +63,13 @@ class PairFormater():
         pair_index = -1
         with pair_lock:
             global pair_id
-            pair_index = pair_id
-            pair_id += 1
+            global pairs
+            if (index1, index2) not in pairs: # avoid doublons
+                pair_index = pair_id
+                pairs.add((index1, index2))
+                pair_id += 1
+            else:
+                return pair_index, None
 
         return pair_index, pair
     

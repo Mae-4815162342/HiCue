@@ -21,7 +21,7 @@ class Display(threading.Thread):
     def run(self):
         while True:
             try: 
-                value = self._input_queue.get(timeout = 10)
+                value = self._input_queue.get()
                 for queue in self._output_queues:
                     queue.put(value)
             except Empty:
@@ -67,7 +67,7 @@ class DisplayBatch(threading.Thread):
     def run(self):
         while True:
             try: 
-                value = self._input_queue.get(timeout = 10)
+                value = self._input_queue.get()
                 for queue in self._output_queues:
                     queue.put(value)
             except Empty:

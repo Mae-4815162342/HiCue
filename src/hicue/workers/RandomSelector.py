@@ -18,7 +18,7 @@ class RandomSelectorScheduler(threading.Thread):
         selecter = RandomSelector(self._output_queues, **self._selargs)
         while True:
             try:
-                val = self._input_queue.get(timeout = 2)
+                val = self._input_queue.get()
             except Empty:
                 break
             if val == 'DONE':

@@ -121,7 +121,7 @@ class PositionFileType(click.ParamType):
             self.fail(f"{value} is not an existing file.")
         extension = value.split('.')[-1].lower()
         if extension not in ["gff", "bed", "bed2d"]:
-                self.fail(f"{value} is not an valid position file (gff or bed format expected) : {e}")
+            self.fail(f"{value} extension is not recognized (gff, bed, or bed2d expected)")
         return extension, value
     
 class Position2dFileType(click.ParamType):

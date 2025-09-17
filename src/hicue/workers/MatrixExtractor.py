@@ -32,7 +32,7 @@ class MatrixExtractorScheduler(threading.Thread):
 
 class MatrixExtractor():
     """Extract the positions submatrices and creates pileups."""
-    def __init__(self, formated_pairs, positions, windows, center = "start", raw = False, method = "median", flip = False, randoms = False, nb_rand_per_pos = 1, display_loci = False, compute_pileups = True, outpath = "", display_args = {}, log = None):
+    def __init__(self, formated_pairs, positions, windows, center = "start", raw = False, method = "median", flip = False, randoms = False, nb_rand_per_pos = 1, display_loci = False, display_batch = False, compute_pileups = True, outpath = "", display_args = {}, log = None):
         self._formated_pairs = formated_pairs
         self._positions = positions
         self._compute_pileups = compute_pileups
@@ -44,6 +44,7 @@ class MatrixExtractor():
         self._randoms = randoms
         self._nb_rand_per_pos = nb_rand_per_pos
         self._display_loci = display_loci
+        self._display_batch = display_batch
         self._outpath = outpath
         self._display_args = display_args
         self._log = log
@@ -67,13 +68,13 @@ class MatrixExtractor():
         unique_sep_ids = np.unique(self._formated_pairs["Sep_id"])
 
         # for each separation create a pileup
-        pileups = {sep_id : Pileup(sep_id = sep_id, mode = self._method, cool_name = cool_name) for sep_id in unique_sep_ids}
+        pileups = {sep_id : Pileup(nb_matrices = len(self._formated_pairs), sep_id = sep_id, mode = self._method, cool_name = cool_name) for sep_id in unique_sep_ids}
             
         # queues initialisation
         input_queue = Queue()
         raw_submatrices_queue = Queue()
         formater_output_queues = [Queue()] if self._compute_pileups else []
-        display_submatrices_queue = Queue() if not self._randoms else None 
+        display_submatrices_queue = Queue() if not self._randoms and (self._display_batch or self._display_loci) else None 
         
         # initialisation of the individual extracters
         extracters = schedule_workers(
@@ -111,28 +112,31 @@ class MatrixExtractor():
         
         displayers = []
         if not self._randoms:
-            #initialisation of the loci displays (individual and batched)
-            displayer_output = [Queue()] if self._display_loci else [] # initializing a queue for the the individual display input
-            displayers = schedule_workers(
-                    worker_class = "DisplayBatch",
-                    worker_location = "hicue.classes.AsyncDisplays",
-                    threads = 1,
-                    input_queue = display_submatrices_queue,
-                    output_queues = displayer_output,
-                    function = display_batch_submatrices,
-                    batch_size = 64,
-                    params_to_batch = ["window", "outfolder"],
-                    positions = self._positions,
-                    chromsizes = cool_file.chromsizes,
-                    **self._display_args
-                )
+            displayer_output = [Queue()] if self._display_loci else []
+            if self._display_batch:
+                #initialisation of the loci displays (individual and batched)
+                 # initializing a queue for the the individual display input
+                displayers = schedule_workers(
+                        worker_class = "DisplayBatch",
+                        worker_location = "hicue.classes.AsyncDisplays",
+                        threads = 1,
+                        input_queue = display_submatrices_queue,
+                        output_queues = displayer_output,
+                        function = display_batch_submatrices,
+                        batch_size = 64,
+                        params_to_batch = ["window", "outfolder"],
+                        positions = self._positions,
+                        chromsizes = cool_file.chromsizes,
+                        **self._display_args
+                    )
 
             if self._display_loci:
+                display_input = displayer_output[0] if self._display_batch else display_submatrices_queue
                 displayers += schedule_workers(
                     worker_class = "Display",
                     worker_location = "hicue.classes.AsyncDisplays",
                     threads = 1,
-                    input_queue = displayer_output[0],
+                    input_queue = display_input,
                     output_queues = [],
                     function = display_submatrix,
                     positions = self._positions,
