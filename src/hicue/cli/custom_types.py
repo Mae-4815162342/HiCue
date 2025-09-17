@@ -21,12 +21,12 @@ class coolType(click.ParamType):
             return False
 
     def convert(self, value, param, ctx):
-        if self.is_cool(value) or self.is_mcool(file):
+        if self.is_cool(value) or self.is_mcool(value):
             return [value]
         if not os.path.isfile(value):
             files = value.split(',')
             for file in files:
-                if not self.is_cool(file) or not self.is_mcool(file):
+                if not self.is_cool(file) and not self.is_mcool(file):
                     self.fail(f"{file} is not a valid cool file", param, ctx)
             return files
         else:
@@ -34,7 +34,7 @@ class coolType(click.ParamType):
             with open(value, 'r') as f:
                 for line in f.readlines():
                     file = line.replace('\n', '').replace(' ', '')
-                    if not self.is_cool(file) or not self.is_mcool(file):
+                    if not self.is_cool(file) and not self.is_mcool(file):
                         self.fail(f"{file} is not a valid cool file", param, ctx)
                     else:
                         files.append(file)

@@ -42,9 +42,6 @@ class SubmatrixFormaterScheduler(threading.Thread):
             index, window, pair, submatrix = val
             formated_submatrix = formater.format(submatrix, pair)
 
-            if index % 1000 == 0:
-                print(index, time.time() - start)
-
             for queue in self._output_queues:
                 queue.put((index, window, pair["Sep_id"], formated_submatrix))
 

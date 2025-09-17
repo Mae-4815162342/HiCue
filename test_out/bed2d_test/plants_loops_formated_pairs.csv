@@ -1,5 +1,0 @@
-,Locus1,Locus2,Trans,Ps,Diag_mask,Distance,Chrom1_circular,Chrom2_circular,Sep_id
-0,1,0,False,True,0,820000,True,True,cis
-1,2,0,False,True,0,665000,True,True,cis
-2,1,3,False,True,0,1080000,True,True,cis
-3,2,3,False,True,0,925000,True,True,cis

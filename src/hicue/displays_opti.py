@@ -222,10 +222,9 @@ async def display_pileup(pileup, sep_id, patch_detrending = {}, windows = [], tr
     create_folder_path(outfolder)
 
     for window in windows:
-        print("computing matrix")
         pileup_matrix = pileup.get_matrix(window)
         # applying patch detrending
-        print("computing done")
+        
         if sep_id in patch_detrending:
             pileup_matrix = pileup_matrix / patch_detrending[sep_id]["pileup"].get_matrix(window)
         
@@ -311,7 +310,6 @@ async def display_pileup(pileup, sep_id, patch_detrending = {}, windows = [], tr
             else:
                 ax.set_title(pileup_title)
 
-        print("saving pileup figure")
         if len(outpath) > 0 :
             for format in output_format:
                 plt.savefig(outfolder + f"/pileup_{window // 1000}kb_window.{format}", bbox_inches="tight")

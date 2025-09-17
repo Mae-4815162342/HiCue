@@ -22,8 +22,6 @@ class Pileup():
                 self._size[window] = sub_size
                 self._nb_matrices[window] = 0
             flattened = submatrix.flatten()
-            if len(flattened) != (sub_size**2):
-                print(self._size[window], sub_size, flattened)
             self._pileup_matrices[window][self._nb_matrices[window]] = flattened
             self._nb_matrices[window] += 1
 
