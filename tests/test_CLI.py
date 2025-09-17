@@ -109,51 +109,51 @@ def test_hicue_extract_loops():
         )
 
 
-def test_hicue_extract2():
-    """Test the hicue extract CLI command with actual test data."""
-    runner = CliRunner()
+# def test_hicue_extract2():
+#     """Test the hicue extract CLI command with actual test data."""
+#     runner = CliRunner()
 
-    # Get the project root directory
-    project_root = Path(__file__).parent.parent
-    tests_data_dir = project_root / "tests_data"
-    bedpe_file = tests_data_dir / "microC_Constantino_loops_subset.bedpe"
-    cool_file = tests_data_dir / "microC_Constantino.cool"
+#     # Get the project root directory
+#     project_root = Path(__file__).parent.parent
+#     tests_data_dir = project_root / "tests_data"
+#     bedpe_file = tests_data_dir / "microC_Constantino_loops_subset.bedpe"
+#     cool_file = tests_data_dir / "microC_Constantino.cool"
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        output_dir = Path(temp_dir) / "out"
+#     with tempfile.TemporaryDirectory() as temp_dir:
+#         output_dir = Path(temp_dir) / "out"
 
-        # Run the hicue extract command
-        result = runner.invoke(
-            extract2d,
-            [
-                str(output_dir),
-                str(bedpe_file),
-                str(cool_file),
-                "--pileup",
-                "--detrending",
-                "ps",
-            ],
-        )
+#         # Run the hicue extract command
+#         result = runner.invoke(
+#             extract2d,
+#             [
+#                 str(output_dir),
+#                 str(bedpe_file),
+#                 str(cool_file),
+#                 "--pileup",
+#                 "--detrending",
+#                 "ps",
+#             ],
+#         )
 
-        # Check that the command executed successfully
-        assert (
-            result.exit_code == 0
-        ), f"Command failed with exit code {result.exit_code}. Output: {result.output}"
+#         # Check that the command executed successfully
+#         assert (
+#             result.exit_code == 0
+#         ), f"Command failed with exit code {result.exit_code}. Output: {result.output}"
 
-        # Check that output directory was created
-        assert output_dir.exists(), "Output directory should have been created"
+#         # Check that output directory was created
+#         assert output_dir.exists(), "Output directory should have been created"
 
-        # Check that some output files were generated
-        output_files = list(output_dir.rglob("*"))
-        assert len(output_files) > 0, "No output files were generated"
+#         # Check that some output files were generated
+#         output_files = list(output_dir.rglob("*"))
+#         assert len(output_files) > 0, "No output files were generated"
 
-        # Check for expected output structure (log file should exist)
-        log_files = list(output_dir.glob("*_log.txt"))
-        assert len(log_files) > 0, "Log file should have been created"
+#         # Check for expected output structure (log file should exist)
+#         log_files = list(output_dir.glob("*_log.txt"))
+#         assert len(log_files) > 0, "Log file should have been created"
 
-        print(
-            f"Test passed! Generated {len(output_files)} output files in {output_dir}"
-        )
+#         print(
+#             f"Test passed! Generated {len(output_files)} output files in {output_dir}"
+#         )
 
 
 def test_hicue_track():

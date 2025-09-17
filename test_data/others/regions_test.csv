@@ -1,0 +1,5 @@
+Id,Chromosome,Start,End
+Chrom1,chrI,100000,2000000
+Chrom2,chrII,100000,2000000
+Both,chrI,100000,2000000
+Both,chrII,100000,2000000

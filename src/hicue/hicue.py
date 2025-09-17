@@ -596,7 +596,7 @@ def compare(cool_pair, positions, outpath, params, log = None):
                                             pileup = pileup / pileup_null
                             
                             size = int(np.sqrt(len(pileup)))
-                            pd.DataFrame(pileup.reshape((size, size))).to_csv(f"{matrix_tmp}/{name}_pileup.csv")
+                            pd.DataFrame(pileup.reshape((size, size))).to_csv(f"{matrix_tmp}/{name}_pileup_{window}_{bins}.csv")
 
         # building pairs of submatrices and displaying
         for cools in cool_pair_list:
@@ -638,16 +638,22 @@ def compare(cool_pair, positions, outpath, params, log = None):
                     # retrieving matrices positions
                     is_pileup = False
                     if "pileup" in sub:
+                        if not compute_pileup:
+                            continue
                         is_pileup = True
+                        window = int(sub[len(position_name) + 1:].split('_')[1])
+                        bins = int(sub[len(position_name) + 1:].split('_')[2].split('.')[0])
                     else:
                         if loops:
                             pos1 = int(sub[len(position_name) + 1:].split('_')[0])
                             pos2 = int(sub[len(position_name) + 1:].split('_')[1])
                             window = int(sub[len(position_name) + 1:].split('_')[2])
+                            bins = int(sub[len(position_name) + 1:].split('_')[3].split('.')[0])
                         else:
                             pos1 = int(sub[len(position_name) + 1:].split('_')[0])
                             pos2 = None
                             window = int(sub[len(position_name) + 1:].split('_')[1])
+                            bins = int(sub[len(position_name) + 1:].split('_')[2].split('.')[0])
 
                     # display
                     save_to = matrix_outfolder1 + "_vs_" + matrix_outfolder2.split('/')[-1]

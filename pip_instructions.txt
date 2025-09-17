@@ -1,0 +1,18 @@
+Activate env:
+ . .venv/bin/activate
+
+To re-upload on test.pypi:
+
+- compile with :  python3 -m build
+- upload with (change version to push again on PyPi):  twine upload --repository hicue dist/*
+( do : nano ~/.pypirc if it must be loaded on the real server, because the address and token will require change )
+- re-install with : pip install -i https://test.pypi.org/simple/ hicue
+( later the -i won't be necessary )
+
+Local developpement command:
+outside the package: pip install -e
+then the command should work normally
+
+Example of command:
+hicue tracks ./test_tracks ./test_data/Echantillon_1.CPM.bw ./test_data/D_dadantii_matrices.txt -p high 5 --gff /data/Maelys/genomes/D_dadantii_3937/D_dadantii_3937.gff --circulars NC_014500.1 --detrending patch --nb_pos 1 --flip --windows 20000
+hicue extract2d ./test_2d ./test_data/plants_loops.bed2d ./test_data/files.txt --loci --windows 100000 --detrending ps
