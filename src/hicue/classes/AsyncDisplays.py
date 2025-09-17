@@ -39,30 +39,33 @@ class DisplayBatch(threading.Thread):
         self._output_queues = output_queues
         self._func = function
         self._batch_size = batch_size
-        self._current_batch = []
+        self._current_batch = {}
         self._statics = static_params
         self._params_to_batch = params_to_batch
-        self._nb_batch = 1
+        self._nb_batch = {}
         self.start()
         
-    def add_to_batch(self, **params):
+    def add_to_batch(self, window, **params):
         """Adds new object params to the current batch"""
         for param in self._params_to_batch:
             if param not in self._statics:
                 self._statics[param] = params[param]
-        self._current_batch.append(params)
+        if window not in self._current_batch:
+            self._current_batch[window] = []
+            self._nb_batch[window] = 1
+        self._current_batch[window].append(params)
         
-    def empty_batch(self):
-        self._current_batch = []
+    def empty_batch(self, window):
+        self._current_batch[window] = []
         
-    def get_current_batch_size(self):
-        return len(self._current_batch)
+    def get_current_batch_size(self, window):
+        return len(self._current_batch[window])
     
-    def is_empty_batch(self):
-        return self.get_current_batch_size() == 0
+    def is_empty_batch(self, window):
+        return self.get_current_batch_size(window) == 0
         
-    def call_batch_display(self):
-        asyncio.run(self._func(self._current_batch, batch_size = self._batch_size, title = f"batch#{self._nb_batch}", **self._statics))
+    def call_batch_display(self, window):
+        asyncio.run(self._func(self._current_batch[window], batch_size = self._batch_size, title = f"batch#{self._nb_batch[window]}", window = window, **self._statics))
         
     def run(self):
         while True:
@@ -75,10 +78,12 @@ class DisplayBatch(threading.Thread):
             if value == "DONE":
                 break
 
+            window = value["window"]
             self.add_to_batch(**value)
-            if self.get_current_batch_size() == self._batch_size:
-                self.call_batch_display()
-                self.empty_batch()
-                self._nb_batch += 1
-        if not self.is_empty_batch():
-            self.call_batch_display()
+            if self.get_current_batch_size(window) == self._batch_size:
+                self.call_batch_display(window)
+                self.empty_batch(window)
+                self._nb_batch[window] += 1
+        for window in self._current_batch.keys():
+            if not self.is_empty_batch(window):
+                self.call_batch_display(window)

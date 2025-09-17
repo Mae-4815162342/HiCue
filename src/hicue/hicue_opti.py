@@ -102,7 +102,7 @@ def extract(cool_files, positions, outpath, log = None, **params):
         pileups_random = {}
         if params['detrending'] == "patch":
             pileups_random_queue = matrix_extractor.launch_extraction(random_selection, formated_pairs, randoms = True, threads=threads)
-            pileups_random = empty_queue_in_dict(pileups_random_queue, key = "sep_id") # exporting the patch detrending as an dict for access
+            pileups_random = empty_queue_in_dict(pileups_random_queue, keys = ["sep_id", "binning"]) # exporting the patch detrending as an dict for access
 
         ## Pileup detrending and display
         # seems to crash after here

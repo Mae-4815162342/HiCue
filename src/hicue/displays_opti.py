@@ -211,7 +211,7 @@ async def display_batch_submatrices(submatrices, positions, window, title = "", 
 
     plt.close()
 
-async def display_pileup(pileup, sep_id, patch_detrending = {}, windows = [], track_pileup=[], cmap=None, cmap_color="seismic", title="", track_title="", outpath="", output_format=['.pdf'], display_strand=True, display_sense="forward", is_contact = False, track_label="Average Track"):
+async def display_pileup(pileup, sep_id, patch_detrending = {}, windows = [], binning = 1000, track_pileup=[], cmap=None, cmap_color="seismic", title="", track_title="", outpath="", output_format=['.pdf'], display_strand=True, display_sense="forward", is_contact = False, track_label="Average Track"):
     """Displays a pileup with or without tracks."""
     vmin = None if cmap == None else cmap[0]
     vmax = None if cmap == None else cmap[1]
@@ -226,7 +226,8 @@ async def display_pileup(pileup, sep_id, patch_detrending = {}, windows = [], tr
         # applying patch detrending
         
         if sep_id in patch_detrending:
-            pileup_matrix = pileup_matrix / patch_detrending[sep_id]["pileup"].get_matrix(window)
+            detrending = patch_detrending[f"{sep_id}_{binning}"]["pileup"].get_matrix(window)
+            pileup_matrix = pileup_matrix / detrending
         
         pileup_title = f"{title} pileup in {pileup.get_cool_name()} \n ({pileup.get_nb_matrices(window)} matrices)"
 

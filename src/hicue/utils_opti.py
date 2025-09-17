@@ -166,8 +166,8 @@ def detrend_submatrix(submatrix, locus1, locus2, binning, ps, center="start"):
     submatrix_det = submatrix / ps[submatrix_index]
     return submatrix_det
 
-def empty_queue_in_dict(queue, key):
-        """Empties a dict queue in a dict, using key as the dict element key."""
+def empty_queue_in_dict(queue, keys):
+        """Empties a dict queue in a dict, using keys as the dict element key."""
         queue_dict = {}
         while True:
             try:
@@ -176,5 +176,6 @@ def empty_queue_in_dict(queue, key):
                 break
             if value == "DONE":
                 break
-            queue_dict[value[key]] = value
+            key = "_".join([str(value[k]) for k in keys])
+            queue_dict[key] = value
         return queue_dict

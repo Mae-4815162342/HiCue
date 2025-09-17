@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hicue"
-version = "0.3.1"
+version = "0.3.2"
 authors = [
   { name="Maelys Delouis", email="maelys.delouis@pasteur.fr" },
 ]

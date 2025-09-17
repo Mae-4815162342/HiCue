@@ -27,6 +27,7 @@ class MatrixExtractorScheduler(threading.Thread):
                 for queue in self._output_queues:
                     queue.put({
                         "pileup":pileups[sep_id],
+                        "binning": cool_file.binsize,
                         "sep_id": sep_id
                     })
 
@@ -68,7 +69,8 @@ class MatrixExtractor():
         unique_sep_ids = np.unique(self._formated_pairs["Sep_id"])
 
         # for each separation create a pileup
-        pileups = {sep_id : Pileup(nb_matrices = len(self._formated_pairs), sep_id = sep_id, mode = self._method, cool_name = cool_name) for sep_id in unique_sep_ids}
+        nb_matrices = len(self._formated_pairs) if not self._randoms else len(self._formated_pairs) * self._nb_rand_per_pos
+        pileups = {sep_id : Pileup(nb_matrices = nb_matrices, sep_id = sep_id, mode = self._method, cool_name = cool_name, binning = cool_file.binsize) for sep_id in unique_sep_ids}
             
         # queues initialisation
         input_queue = Queue()
@@ -124,7 +126,7 @@ class MatrixExtractor():
                         output_queues = displayer_output,
                         function = display_batch_submatrices,
                         batch_size = 64,
-                        params_to_batch = ["window", "outfolder"],
+                        params_to_batch = ["outfolder"],
                         positions = self._positions,
                         chromsizes = cool_file.chromsizes,
                         **self._display_args
