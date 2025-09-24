@@ -3,7 +3,7 @@ import click
 
 from .imports import *
 
-from .custom_types import COOL, INT_LIST, STR_LIST, POSITION_FILE, GFF_FILE
+from .custom_types import COOL, INT_LIST, STR_LIST, POSITION_FILE, GFF_FILE, SEPARATOR_LIST
 
 import hicue.hicue_opti as h
 
@@ -17,7 +17,7 @@ import hicue.hicue_opti as h
 @click.option('-w', '--windows', type=INT_LIST, default="30000", help="Window size for sub-matrices extraction in bp. Several window sizes can be provided as a comma-separated list. Default value: 30000.")
 @click.option('-d', '--detrending',type=click.Choice(['patch', 'ps', 'none'], case_sensitive=False), default='none', help='Detrending option. Default value: none.')
 @click.option('-m', '--method', type=click.Choice(['median', 'mean', 'sum'], case_sensitive=False), default='median', help="Aggregation method. If the selected detrending is patch, the method will also be used to aggregate the random sub-matrices. Default value: median.")
-@click.option('-f', '--flip', is_flag=True, help="Enables sub-matrices flipping depending on their sense of transcription in the pileups. Requires the strand annotation of provided positions. If not provided, will consider all position in forward.")
+@click.option('-f', '--flip', is_flag=True, default=False, help="Enables sub-matrices flipping depending on their sense of transcription in the pileups. Requires the strand annotation of provided positions. If not provided, will consider all position in forward.")
 @click.option('-r', '--raw', is_flag=True, default=False, help="Use the raw matrices in the cool files (sets balance to False). Default value: False")
 @click.option('-t', '--threads', type=int, default=8, help="Number of threads used by each multithreaded worker type. Default: 8.")
 @click.option('--nb_pos', type=int, default=2, help="Number of random positions selected for patch detrending. Default value: 2.")
@@ -39,7 +39,7 @@ import hicue.hicue_opti as h
 @click.option('--display_sense', type=click.Choice(['forward', 'reverse'], case_sensitive=False), default='forward', help="Sense of display. In 'forward' mode, the matrices are represented with the forward sense going from left to right, and from right to left in 'reverse' mode.")
 @click.option('--center', type=click.Choice(['start', 'center', 'end'], case_sensitive=False), default='start', help="Defines the positional parameter of each position chosen as the window center. 'start' for the start site, 'end' for the end site, and 'center' for the average between those last two.")
 @click.option('--overlap', type=click.Choice(['strict', 'flex'], case_sensitive=False), default='strict', help="When evaluating the belonging of a position to an interval, sets the severity of the discrimination: 'strict' will only allow position having start and end positions within the interval, whereas 'flex' will consider the position even if the overlap is not complete. Default value: strict.")
-@click.option('--separate_by', type=STR_LIST, help="Comma-separated list of the separation operations. Allowed operations: ['direction', 'regions', 'chroms']. As the option is an inclusion of the separate command, enter: hicue separate --help for more information. ")
+@click.option('--separate_by', type=SEPARATOR_LIST, help=f"Comma-separated list of the separation operations. Allowed operations: {AUTHORIZED_SEPARATORS}. As the option is an inclusion of the separate command, enter: hicue separate --help for more information. ")
 @click.option('--separation_regions', type=click.Path(exists=True, dir_okay=False, readable=True, path_type='csv'), help="Path to csv file providing the regions when --separate_by regions mode is selected. As the option is an inclusion of the separate command, enter: hicue separate --help for more information.")# Allows discountinuous interval if provided with the same ID. Csv format: Id,Chromosome,Start,End.")
 @click.option('--contact_range', type=(int, int, int), help="Provides MIN MAX STEP in bp as a range for the distance separation on contacts. Overrides the --min_dist option. Default value: (20000,200000,30000).")
 @click.option('--save_tmp', is_flag=True, help="Save the temporary files to outpath")

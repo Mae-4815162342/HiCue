@@ -43,6 +43,7 @@ class Extracter():
     def extract_pair(self, pair):
         """Calls the extract function on the pair for each window size. Yields a square submatrix as a numpy array."""
         for window in self._windows:
+            print(pair)
             submatrix = extract_window(self._cool_file, 
                                     self._positions.loc[pair['Locus1']], 
                                     self._positions.loc[pair['Locus2']], 

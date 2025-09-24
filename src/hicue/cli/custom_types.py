@@ -110,6 +110,18 @@ class StrListType(click.ParamType):
             if len(s) == 0:
                 self.fail(f"Empty strings. Comma must separate two distinct values; if a single string is passed, no comma must be found in {param.name}.")
         return strs
+    
+class SeparatorListType(click.ParamType):
+    name="sep_list"
+
+    def convert(self, value, param, ctx):
+        strs = value.split(',')
+        for s in strs:
+            if len(s) == 0:
+                self.fail(f"Empty strings. Comma must separate two distinct values; if a single string is passed, no comma must be found in {param.name}.")
+            if s not in AUTHORIZED_SEPARATORS:
+                self.fail(f"{s} is not an authorized separator. Please provide a list of comma-separated separators in the following list: {AUTHORIZED_SEPARATORS}")
+        return strs
 
 class PositionFileType(click.ParamType):
     name="position file"
@@ -167,12 +179,11 @@ class TrackFileType(click.ParamType):
         except:
             self.fail(f"{value} provided for {param.name} is not in the bigWig format.")
 
-
-
 COOL = coolType()
 COOL_PAIR = coolPairType()
 INT_LIST = IntListType()
 STR_LIST = StrListType()
+SEPARATOR_LIST = SeparatorListType()
 POSITION_FILE = PositionFileType()
 POSITION2D_FILE = Position2dFileType()
 TRACK_FILE = TrackFileType()
