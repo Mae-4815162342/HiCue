@@ -67,7 +67,11 @@ def extract(cool_files, positions, outpath, log = None, **params):
     ## Formating indexes pairs
     formater = PairFormater(positions, **format_params)
     formated_pairs = formater.format_pairs(pairing_queue, threads = threads)
-    
+
+    if len(formated_pairs) == 0:
+        log.write('Empty separation: No position nor pair of positions is matching any possible separation.')   
+        return
+
     if params["save_tmp"]:
         positions.to_csv(f"{outpath}/{data_title}_positions.csv")
         formated_pairs.to_csv(f"{outpath}/{data_title}_formated_pairs.csv")
