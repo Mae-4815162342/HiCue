@@ -72,9 +72,7 @@ class MatrixExtractor():
         # for each separation create a pileup
         nb_matrices = len(self._formated_pairs) if not self._randoms else len(self._formated_pairs) * self._nb_rand_per_pos
         pileups = {sep_id : Pileup(nb_matrices = nb_matrices, sep_id = sep_id, mode = self._method, cool_name = cool_name, binning = cool_file.binsize) for sep_id in unique_sep_ids}
-        nb_matrices = len(self._formated_pairs) if not self._randoms else len(self._formated_pairs) * self._nb_rand_per_pos
-        pileups = {sep_id : Pileup(nb_matrices = nb_matrices, sep_id = sep_id, mode = self._method, cool_name = cool_name, binning = cool_file.binsize) for sep_id in unique_sep_ids}
-            
+
         # queues initialisation
         input_queue = Queue()
         raw_submatrices_queue = Queue()
@@ -151,7 +149,8 @@ class MatrixExtractor():
 
         aggregators = []
         if self._compute_pileups :
-        
+            if random:
+                print('launching aggregation for random')
             # initialisation of the pileup workers
             aggregators = schedule_workers(
                     worker_class = "AggregatorScheduler",

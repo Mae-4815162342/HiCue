@@ -12,16 +12,17 @@ class Pileup():
         self._pileup_matrices = {}
         self._nb_matrices = {}
         self._size = {}
+        self._n = 1
 
     def add_submatrix(self, window, submatrix):
         """Adds a submatrix to the pileup."""
         sub_size = len(submatrix)
         with self.pileup_lock:
             if window not in self._pileup_matrices:
-                self._pileup_matrices[window] = np.empty((self._max_matrices, sub_size, sub_size), dtype=np.float32)
+                self._pileup_matrices[window] = np.empty((self._max_matrices, sub_size**2), dtype=np.float32)
                 self._size[window] = sub_size
                 self._nb_matrices[window] = 0
-            self._pileup_matrices[window][self._nb_matrices[window]] = submatrix
+            self._pileup_matrices[window][self._nb_matrices[window]] = submatrix.flatten()
             self._nb_matrices[window] += 1
 
     def get_matrix(self, window):
@@ -31,12 +32,12 @@ class Pileup():
                 matrix = None
                 match self._mode:
                     case "median":
-                        matrix = np.nanmedian(self._pileup_matrices[window], axis = 0)
+                        matrix = np.nanmedian(self._pileup_matrices[window][:self._nb_matrices[window]], axis = 0)
                     case "mean":
-                        matrix = np.nanmean(self._pileup_matrices[window], axis = 0)
+                        matrix = np.nanmean(self._pileup_matrices[window][:self._nb_matrices[window]], axis = 0)
                     case "sum":
-                        matrix = np.nansum(self._pileup_matrices[window], axis = 0)
-                return matrix
+                        matrix = np.nansum(self._pileup_matrices[window][:self._nb_matrices[window]], axis = 0)
+                return matrix.reshape((self._size[window], self._size[window]))
             return None
     
     def get_sep_id(self):

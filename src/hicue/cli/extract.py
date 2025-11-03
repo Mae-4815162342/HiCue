@@ -54,10 +54,12 @@ def extract(ctx, outpath, positions, cool_files, **params):
         log.write(f"""Extracting from {cool_files}
                 positions file: {positions}
                 outpath: {outpath}
-                
-                Options:
-                {params}
         """)
+        log.write(f"\nOptions:")
+        for param in params:
+                log.write(f"""
+        {param} = {params[param]}""")
+
 
         start_time = time.time()
 
@@ -65,6 +67,6 @@ def extract(ctx, outpath, positions, cool_files, **params):
         
         end_time = time.time()
 
-        log.write(f"Total time: {end_time - start_time} seconds ({(end_time - start_time)/60} min)")
+        log.write(f"\nTotal time: {end_time - start_time} seconds ({(end_time - start_time)/60} min)")
         if log != None:
                 log.close()
