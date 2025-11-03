@@ -68,6 +68,10 @@ def extract(cool_files, positions, outpath, log = None, **params):
     formater = PairFormater(positions, **format_params)
     formated_pairs = formater.format_pairs(pairing_queue, threads = threads)
 
+    if len(formated_pairs) == 0:
+        log.write('Empty separation: No position nor pair of positions is matching any possible separation.')   
+        return
+
     if params["save_tmp"]:
         positions.to_csv(f"{outpath}/{data_title}_positions.csv")
         formated_pairs.to_csv(f"{outpath}/{data_title}_formated_pairs.csv")
@@ -83,6 +87,7 @@ def extract(cool_files, positions, outpath, log = None, **params):
     
     ## Matrix extraction
     matrix_extractor = MatrixExtractorLauncher(cool_files,
+                                               nb_pos = len(positions),
                                                compute_pileups = params["pileup"],
                                                binnings = params["binnings"], 
                                                windows = params["windows"],

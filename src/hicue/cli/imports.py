@@ -31,3 +31,6 @@ import cooler
 # errors managment
 pd.options.mode.chained_assignment = None 
 np.seterr(all="ignore")
+
+# constants
+AUTHORIZED_SEPARATORS = ["direction", "regions", "chroms"]

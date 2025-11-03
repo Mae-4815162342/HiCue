@@ -34,7 +34,7 @@ class MatrixExtractorScheduler(threading.Thread):
 
 class MatrixExtractor():
     """Extract the positions submatrices and creates pileups."""
-    def __init__(self, formated_pairs, positions, windows, center = "start", raw = False, method = "median", flip = False, randoms = False, nb_rand_per_pos = 1, display_loci = False, display_batch = False, compute_pileups = True, outpath = "", display_args = {}, log = None):
+    def __init__(self, formated_pairs, positions, windows, nb_pos = -1, center = "start", raw = False, method = "median", flip = False, randoms = False, nb_rand_per_pos = 1, display_loci = False, display_batch = False, compute_pileups = True, outpath = "", display_args = {}, log = None):
         self._formated_pairs = formated_pairs
         self._positions = positions
         self._compute_pileups = compute_pileups
@@ -44,6 +44,7 @@ class MatrixExtractor():
         self._method = method
         self._flip = flip
         self._randoms = randoms
+        self._nb_pos = len(positions) if nb_pos < 0 else nb_pos
         self._nb_rand_per_pos = nb_rand_per_pos
         self._display_loci = display_loci
         self._display_batch = display_batch
@@ -52,9 +53,8 @@ class MatrixExtractor():
         self._log = log
 
     @staticmethod
-    def stream_pairs(input_queue, formated_pairs, randoms = False, nb_rand_per_pos = 1, threads = 8):
+    def stream_pairs(input_queue, formated_pairs, nb_pos, randoms = False, nb_rand_per_pos = 1, threads = 8):
         """Puts each formated pair of sep_id (or random pair keeping the original pair format) in the input queue."""
-        nb_pos = len(formated_pairs) // nb_rand_per_pos
         for index, pair in formated_pairs.iterrows():
             if randoms:
                 for random_pair in yield_random_pairs(pair, nb_rand_per_pos, nb_pos):
@@ -72,9 +72,7 @@ class MatrixExtractor():
         # for each separation create a pileup
         nb_matrices = len(self._formated_pairs) if not self._randoms else len(self._formated_pairs) * self._nb_rand_per_pos
         pileups = {sep_id : Pileup(nb_matrices = nb_matrices, sep_id = sep_id, mode = self._method, cool_name = cool_name, binning = cool_file.binsize) for sep_id in unique_sep_ids}
-        nb_matrices = len(self._formated_pairs) if not self._randoms else len(self._formated_pairs) * self._nb_rand_per_pos
-        pileups = {sep_id : Pileup(nb_matrices = nb_matrices, sep_id = sep_id, mode = self._method, cool_name = cool_name, binning = cool_file.binsize) for sep_id in unique_sep_ids}
-            
+
         # queues initialisation
         input_queue = Queue()
         raw_submatrices_queue = Queue()
@@ -129,7 +127,7 @@ class MatrixExtractor():
                         output_queues = displayer_output,
                         function = display_batch_submatrices,
                         batch_size = 64,
-                        params_to_batch = ["outfolder"],
+                        params_to_batch = [],
                         positions = self._positions,
                         chromsizes = cool_file.chromsizes,
                         **self._display_args
@@ -151,7 +149,6 @@ class MatrixExtractor():
 
         aggregators = []
         if self._compute_pileups :
-        
             # initialisation of the pileup workers
             aggregators = schedule_workers(
                     worker_class = "AggregatorScheduler",
@@ -163,7 +160,7 @@ class MatrixExtractor():
                 )
         
         # streaming the pairs in the input_queue
-        self.stream_pairs(input_queue, self._formated_pairs, randoms = self._randoms, nb_rand_per_pos = self._nb_rand_per_pos, threads = 1)
+        self.stream_pairs(input_queue, self._formated_pairs, self._nb_pos, randoms = self._randoms, nb_rand_per_pos = self._nb_rand_per_pos, threads = 1)
         
         # joining         
         join_workers(extracters)
