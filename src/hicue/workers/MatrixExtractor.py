@@ -129,7 +129,7 @@ class MatrixExtractor():
                         output_queues = displayer_output,
                         function = display_batch_submatrices,
                         batch_size = 64,
-                        params_to_batch = ["outfolder"],
+                        params_to_batch = [],
                         positions = self._positions,
                         chromsizes = cool_file.chromsizes,
                         **self._display_args

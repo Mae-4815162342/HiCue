@@ -122,7 +122,7 @@ class SubmatrixFormater():
         result_matrix = matrix
         locus1 = self._positions.loc[pair['Locus1']]
         locus2 = self._positions.loc[pair['Locus2']]
-
+        
         # masking
         result_matrix = mask_diagonal(result_matrix, 
                                       locus1, 

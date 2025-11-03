@@ -34,7 +34,7 @@ class SeparatorScheduler(threading.Thread):
 class Separator():
     """Class implementing the separate_by option: computes the group of a pair of positions"""
     def __init__(self, separate_by, overlap = "strict", center = "start", contact_range = [], separate_regions = None, has_trans = False):
-        self._separate_by = separate_by
+        self._separate_by = separate_by if separate_by is not None else []
         self._overlap = overlap
         self._center = center
         self._contact_range = contact_range if contact_range else []
