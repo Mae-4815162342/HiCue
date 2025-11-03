@@ -34,7 +34,7 @@ class MatrixExtractorScheduler(threading.Thread):
 
 class MatrixExtractor():
     """Extract the positions submatrices and creates pileups."""
-    def __init__(self, formated_pairs, positions, windows, center = "start", raw = False, method = "median", flip = False, randoms = False, nb_rand_per_pos = 1, display_loci = False, display_batch = False, compute_pileups = True, outpath = "", display_args = {}, log = None):
+    def __init__(self, formated_pairs, positions, windows, nb_pos = -1, center = "start", raw = False, method = "median", flip = False, randoms = False, nb_rand_per_pos = 1, display_loci = False, display_batch = False, compute_pileups = True, outpath = "", display_args = {}, log = None):
         self._formated_pairs = formated_pairs
         self._positions = positions
         self._compute_pileups = compute_pileups
@@ -44,6 +44,7 @@ class MatrixExtractor():
         self._method = method
         self._flip = flip
         self._randoms = randoms
+        self._nb_pos = len(positions) if nb_pos < 0 else nb_pos
         self._nb_rand_per_pos = nb_rand_per_pos
         self._display_loci = display_loci
         self._display_batch = display_batch
@@ -52,9 +53,8 @@ class MatrixExtractor():
         self._log = log
 
     @staticmethod
-    def stream_pairs(input_queue, formated_pairs, randoms = False, nb_rand_per_pos = 1, threads = 8):
+    def stream_pairs(input_queue, formated_pairs, nb_pos, randoms = False, nb_rand_per_pos = 1, threads = 8):
         """Puts each formated pair of sep_id (or random pair keeping the original pair format) in the input queue."""
-        nb_pos = len(formated_pairs) // nb_rand_per_pos
         for index, pair in formated_pairs.iterrows():
             if randoms:
                 for random_pair in yield_random_pairs(pair, nb_rand_per_pos, nb_pos):
@@ -149,8 +149,6 @@ class MatrixExtractor():
 
         aggregators = []
         if self._compute_pileups :
-            if random:
-                print('launching aggregation for random')
             # initialisation of the pileup workers
             aggregators = schedule_workers(
                     worker_class = "AggregatorScheduler",
@@ -162,7 +160,7 @@ class MatrixExtractor():
                 )
         
         # streaming the pairs in the input_queue
-        self.stream_pairs(input_queue, self._formated_pairs, randoms = self._randoms, nb_rand_per_pos = self._nb_rand_per_pos, threads = 1)
+        self.stream_pairs(input_queue, self._formated_pairs, self._nb_pos, randoms = self._randoms, nb_rand_per_pos = self._nb_rand_per_pos, threads = 1)
         
         # joining         
         join_workers(extracters)

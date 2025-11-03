@@ -83,6 +83,7 @@ def extract(cool_files, positions, outpath, log = None, **params):
     
     ## Matrix extraction
     matrix_extractor = MatrixExtractorLauncher(cool_files,
+                                               nb_pos = len(positions),
                                                compute_pileups = params["pileup"],
                                                binnings = params["binnings"], 
                                                windows = params["windows"],

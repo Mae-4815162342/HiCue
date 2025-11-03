@@ -12,7 +12,6 @@ class Pileup():
         self._pileup_matrices = {}
         self._nb_matrices = {}
         self._size = {}
-        self._n = 1
 
     def add_submatrix(self, window, submatrix):
         """Adds a submatrix to the pileup."""
