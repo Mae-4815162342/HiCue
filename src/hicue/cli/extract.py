@@ -2,13 +2,14 @@
 import click
 
 from .imports import *
+from hicue.utils_opti import *
 
 from .custom_types import COOL, INT_LIST, STR_LIST, POSITION_FILE, GFF_FILE, SEPARATOR_LIST
 
 import hicue.hicue_opti as h
 
 @click.command("extract")
-@click.argument("outpath", type=click.Path(file_okay=False))
+@click.argument("outpath", type=str)
 @click.argument('positions', type=POSITION_FILE)
 @click.argument("cool_files", type=COOL)
 @click.option('--gff', type=GFF_FILE, help="Gff file provided for the position file automatic annotation if the file is a bed2d. The positions considered for pileup are all the genes contained in the bed2d files. For more options, use the hicue annotate command.")
@@ -42,6 +43,7 @@ import hicue.hicue_opti as h
 @click.option('--separate_by', type=SEPARATOR_LIST, help=f"Comma-separated list of the separation operations. Allowed operations: {AUTHORIZED_SEPARATORS}. As the option is an inclusion of the separate command, enter: hicue separate --help for more information. ")
 @click.option('--separation_regions', type=click.Path(exists=True, dir_okay=False, readable=True), help="Path to csv file providing the regions when --separate_by regions mode is selected. As the option is an inclusion of the separate command, enter: hicue separate --help for more information.")# Allows discountinuous interval if provided with the same ID. Csv format: Id,Chromosome,Start,End.")
 @click.option('--contact_range', type=(int, int, int), help="Provides MIN MAX STEP in bp as a range for the distance separation on contacts. Overrides the --min_dist option. Default value: (20000,200000,30000).")
+@click.option('--record_type', type=click.Choice(['gene']), help="GFF selected records type. If not provided, all records type are selected in the annotation.")
 @click.option('--save_tmp', is_flag=True, help="Save the temporary files to outpath")
 @click.pass_context
 def extract(ctx, outpath, positions, cool_files, **params):

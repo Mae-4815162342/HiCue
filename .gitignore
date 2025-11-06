@@ -73,3 +73,5 @@ Thumbs.db
 
 test_out
 test_data
+test*
+*/test*

@@ -31,9 +31,10 @@ class ExtracterScheduler(threading.Thread):
 
 class Extracter():
     """Class for submatrix extraction from a pair of positions."""
-    def __init__(self, cool_file, positions, windows, center = "start", raw = False, random = False):
+    def __init__(self, cool_file, positions, windows, tracks = None, center = "start", raw = False, random = False):
         self._cool_file = cool_file
         self._positions = positions
+        self._tracks = pyBigWig.open(tracks) if tracks is not None and type(tracks) == str else tracks
         self._binning = cool_file.binsize
         self._windows = windows
         self._center = center
@@ -52,5 +53,22 @@ class Extracter():
                                     is_loc2_circ = bool(pair['Chrom2_circular']),
                                     center = self._center, 
                                     raw = self._raw)
+            if self._tracks:
+                subtracks1 = extract_tracks(self._tracks, 
+                                    self._positions.loc[pair['Locus1']],
+                                    self._binning,
+                                    window, 
+                                    is_loc_circ = bool(pair['Chrom1_circular']),
+                                    center = self._center)
+                submatrix = np.concatenate([submatrix, [subtracks1]], axis = 0)
+                if pair['Locus1'] != pair['Locus2']:
+                    subtracks2 = extract_tracks(self._tracks, 
+                                        self._positions.loc[pair['Locus2']],
+                                        self._binning,
+                                        window, 
+                                        is_loc_circ = bool(pair['Chrom2_circular']),
+                                        center = self._center)
+                    submatrix = np.concatenate([submatrix, [subtracks2]], axis = 0)
+                
             yield window, submatrix
     

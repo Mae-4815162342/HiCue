@@ -5,12 +5,13 @@ def initialize_globals():
 
 class AnnotatorScheduler(threading.Thread):
     
-    def __init__(self, input_queue, output_queues, gff = None, tracks = None, overlap = "strict", save_to = "", gff_type = "gene", **kwargs):
+    def __init__(self, input_queue, output_queues, gff = None, tracks = None, threshold = None, overlap = "strict", save_to = "", gff_type = "gene", **kwargs):
         super(AnnotatorScheduler, self).__init__(**kwargs)
 
         self._gff = gff or None
         self._gff_type = gff_type or None
         self._tracks = tracks or None
+        self._threshold = threshold
         self._overlap = overlap
         self._save_to = save_to
 
@@ -25,7 +26,7 @@ class AnnotatorScheduler(threading.Thread):
         if self._gff:
             annotators.append(GffAnnotator(gff = self._gff, overlap = self._overlap, gff_type = self._gff_type, save_to = self._save_to))
         if self._tracks:
-            annotators.append(TracksAnnotator(tracks = self._tracks))
+            annotators.append(TracksAnnotator(tracks = self._tracks, threshold = self._threshold))
         while True:
             try:
                 val = self._input_queue.get()
@@ -37,7 +38,7 @@ class AnnotatorScheduler(threading.Thread):
             for annotator in annotators:
                 position = annotator.annotate_position(index, position)
 
-            if position:
+            if position is not None:
                 for queue in self._output_queues:
                     queue.put((index, position)) 
 
@@ -129,15 +130,15 @@ class GffAnnotator():
         return position
 
 class TracksAnnotator():
-    def __init__(self, tracks):
+    def __init__(self, tracks, threshold = None):
         self._tracks = tracks
-            
-    def annotate_position(self, index, position, threshold = None):
+        self._min_max, self._threshold = threshold or (None, None)
+
+    def annotate_position(self, index, position):
         """Annotates a position from a track file. Adds a columns called Tracks.
         If the track requires selecting that can be computed at this step, the position can be discarded."""  #TODO: add tracks options
         position["Tracks"]  = self._tracks.stats(position["Chromosome"], position["Start"], position["End"])[0]
-        if threshold:
-            threshold_value, min_max = threshold
-            return position if (min_max == "min" and position["Tracks"] >= threshold_value) or (min_max == "max" and position["Tracks"] <= threshold_value) else None
+        position["Tracks"] = position["Tracks"] or np.nan
+        if self._threshold is not None:
+            return position if (self._min_max == "min" and position["Tracks"] >= self._threshold) or (self._min_max == "max" and position["Tracks"] <= self._threshold) else None
         return position
-        

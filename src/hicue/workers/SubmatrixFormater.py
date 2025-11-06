@@ -119,7 +119,9 @@ class SubmatrixFormater():
 
     def format(self, matrix, pair):
         """Applies all formating operations to a submatrix."""
-        result_matrix = matrix
+        result_matrix = matrix[:len(matrix[0])]
+        tracks = matrix[len(matrix[0]):] if len(matrix) > len(matrix[0]) else None
+
         locus1 = self._positions.loc[pair['Locus1']]
         locus2 = self._positions.loc[pair['Locus2']]
         
@@ -137,4 +139,10 @@ class SubmatrixFormater():
         # flipping if required and on diagonal
         if self._flip and pair['Locus1'] == pair['Locus2'] and self._positions.loc[pair['Locus1']]['Strand'] == -1:
             result_matrix = np.flip(result_matrix)
+            if tracks is not None:
+                for i in range(len(tracks)):
+                    tracks[i] = np.flip(tracks[i])
+
+        if tracks is not None:
+            result_matrix = np.concatenate([result_matrix, tracks], axis = 0)
         return result_matrix

@@ -67,7 +67,6 @@ class Separator():
         pos2 = max(position["Start"], position["End"])
         pos1_reg = min(region["Start"], region["End"])
         pos2_reg = max(region["Start"], region["End"])
-        
         match overlap:
             case "flex":
                 # included if the position overlaps the regions, even not completely
@@ -87,6 +86,8 @@ class Separator():
                 return "convergent" if pos2["Strand"] == -1 else "forward"
             if pos1["Strand"] == -1:
                 return "divergent" if pos2["Strand"] == 1 else "reverse"
+            if pos1["Strand"] == 0 or pos2["Strand"] == 0:
+                return "undirected"
         return None
     
     @staticmethod
@@ -115,7 +116,7 @@ class Separator():
                         return region_id
         return None
         
-    def separate_distance(self, pos1, pos2, distance):
+    def separate_distance(self, distance):
         """Returns the distance interval in which the pair's distance is located. If not included in the contact range, returns None."""
         if not distance:
             return None
@@ -149,7 +150,7 @@ class Separator():
             
         # contact_range
         if is_paired and len(self._contact_range) > 0 :
-            group = self.separate_distance(pos1, pos2, distance)
+            group = self.separate_distance(distance)
             if group == None:
                 return ""
             group_list.append(group)

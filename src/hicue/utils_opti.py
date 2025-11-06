@@ -1,5 +1,17 @@
 from .cli.imports import *
 
+def create_folder_path(path):
+    """If a folder path does not exists, create all the dependencies to this path."""
+    path_list = path.split("/")
+    to_add = ""
+    if path_list[0] == "":
+        path_list = path_list[1:]
+        to_add = "/"
+    for i in range(1, len(path_list) + 1):
+        current_path = to_add + "/".join(path_list[:i])
+        if not os.path.exists(current_path):
+            os.mkdir(current_path)
+
 def extract_window(cool, locus1, locus2, binning, window, circular=[], trans=False, diagonal_mask=0, center="start", detrend_matrix = False, raw = False): # TODO: deal with detrending and masking at an upper level. Add flip though
     """Extracts a window from a matix given positions and parameters."""
     matrix = cool.matrix(balance=(not raw))

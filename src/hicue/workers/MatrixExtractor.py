@@ -34,11 +34,12 @@ class MatrixExtractorScheduler(threading.Thread):
 
 class MatrixExtractor():
     """Extract the positions submatrices and creates pileups."""
-    def __init__(self, formated_pairs, positions, windows, nb_pos = -1, center = "start", raw = False, method = "median", flip = False, randoms = False, nb_rand_per_pos = 1, display_loci = False, display_batch = False, compute_pileups = True, outpath = "", display_args = {}, log = None):
+    def __init__(self, formated_pairs, positions, windows, tracks = None, nb_pos = -1, center = "start", raw = False, method = "median", flip = False, randoms = False, nb_rand_per_pos = 1, display_loci = False, display_batch = False, compute_pileups = True, outpath = "", display_args = {}, log = None):
         self._formated_pairs = formated_pairs
         self._positions = positions
         self._compute_pileups = compute_pileups
         self._windows = windows
+        self._tracks = tracks
         self._center = center
         self._raw = raw
         self._method = method
@@ -53,11 +54,11 @@ class MatrixExtractor():
         self._log = log
 
     @staticmethod
-    def stream_pairs(input_queue, formated_pairs, nb_pos, randoms = False, nb_rand_per_pos = 1, threads = 8):
+    def stream_pairs(input_queue, formated_pairs, max_index, randoms = False, nb_rand_per_pos = 1, threads = 8):
         """Puts each formated pair of sep_id (or random pair keeping the original pair format) in the input queue."""
         for index, pair in formated_pairs.iterrows():
             if randoms:
-                for random_pair in yield_random_pairs(pair, nb_rand_per_pos, nb_pos):
+                for random_pair in yield_random_pairs(pair, nb_rand_per_pos, max_index):
                     input_queue.put((index, random_pair))
             else:
                 input_queue.put((index, pair))
@@ -88,6 +89,7 @@ class MatrixExtractor():
                 output_queues = [raw_submatrices_queue],
                 cool_file = cool_file,
                 positions = self._positions, 
+                tracks = self._tracks,
                 windows = self._windows, 
                 center = self._center, 
                 raw = self._raw,
@@ -127,7 +129,7 @@ class MatrixExtractor():
                         output_queues = displayer_output,
                         function = display_batch_submatrices,
                         batch_size = 64,
-                        params_to_batch = [],
+                        params_to_batch = ["track_unit"],
                         positions = self._positions,
                         chromsizes = cool_file.chromsizes,
                         **self._display_args

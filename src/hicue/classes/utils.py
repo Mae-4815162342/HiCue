@@ -54,3 +54,21 @@ def compute_distance(locus1, locus2, center = "start"): # TODO: be aware of dupl
             start1 = max(locus1["Start"], locus1["End"]) if locus1["Strand"] == 1 else min(locus1["Start"], locus1["End"])
             start2 = max(locus2["Start"], locus2["End"]) if locus2["Strand"] == 1 else min(locus2["Start"], locus2["End"])
     return start2 - start1
+
+def compute_nb_pos_tracks(tracks, percentage, binning):
+    """Computes the number of position that will be kept from the binned tracks to get the right percentage."""
+    chromosomes = tracks.chroms()
+    nb_pos_tot = 0
+    for chrom in chromosomes:
+        nb_pos_tot += chromosomes[chrom] // binning + 1
+    return round(nb_pos_tot * percentage / 100)
+
+def compute_nb_pos_gff(gff, percentage, gff_types = ["gene"]):
+    """Computes the number of position that will be kept from the gff selected type to get the right percentage."""
+    examiner = GFF.GFFExaminer()
+    in_handle = open(gff)
+    gff_type_counts = examiner.available_limits(in_handle)['gff_type']
+    nb_pos_tot = 0
+    for gff_type, count in gff_type_counts.items():
+        nb_pos_tot += count if gff_type[0] in gff_types else 0
+    return round(nb_pos_tot * percentage / 100)

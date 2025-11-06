@@ -160,6 +160,75 @@ def extract_window(cool, locus1, locus2, binning, window, is_loc1_circ = False, 
 
     return submatrix
 
+def bin_tracks(tracks, chrom, start, stop, binning):
+    """Returns the binned extracted region from tracks, delimited by start and stop in chrom."""
+    values = []
+    k = start
+    while k < stop:
+        end =  k + binning - 1
+        end = end if end < stop else stop
+        values.append(tracks.stats(chrom, k, end)[0])
+        k += binning
+    if k < stop:
+        values.append(tracks.values(chrom, k, stop)[0])
+    return values
+    
+def extract_tracks(tracks, locus, binning, window, is_loc_circ = False, center="start"): 
+    """Extracts a window from tracks around the locus, binned at binning."""
+    # 1. computing central coordinate
+    match center:
+        case "start":
+            coordinate = min(locus["Start"], locus["End"]) if locus["Strand"] == 1 or locus["Strand"] == 0 else max(locus["Start"], locus["End"])
+        case "center":
+            coordinate = (locus["Start"] + locus["End"]) // 2
+        case "end":
+            coordinate = max(locus["Start"], locus["End"]) if locus["Strand"] == 1 or locus["Strand"] == 0 else min(locus["Start"], locus["End"])
+
+    chrom_size = tracks.chroms(locus["Chromosome"])
+
+    coordinate = adjust_locus(coordinate, chrom_size, is_circ_chrom = is_loc_circ) - 1 # re-ajusting at 0 base for bw format
+
+    # 2. computing binned coordinates
+    binned_coordinates = (coordinate // binning)*binning
+    start = binned_coordinates
+    stop = binned_coordinates + binning - 1
+    
+    # 3. checking overflows
+    is_start_inf = start - window < 0
+    is_start_sup = stop + window >= chrom_size
+    
+    # 3. computing intervales
+    window_start = start - window if not is_start_inf else 0
+    window_stop = stop + window if not is_start_sup else chrom_size - 1
+
+    # 4. fetching main subtracks
+    subtracks = bin_tracks(tracks, locus["Chromosome"], window_start, window_stop, binning)
+
+    # 5. managing overflows
+    expected_size = (window//binning) * 2 + 1
+    start_overflow = is_start_inf or is_start_sup
+    
+    if not start_overflow: # no overflow
+        return np.array(subtracks)
+    
+    bins_to_fill = expected_size - len(subtracks)
+    fill = [np.nan] * bins_to_fill if not is_loc_circ else []
+    
+    if is_start_inf and is_loc_circ: # dim 1 inf
+        start_inf = (chrom_size//binning - bins_to_fill + 1) * binning
+        stop_inf = chrom_size
+        fill = bin_tracks(tracks, locus["Chromosome"], start_inf, stop_inf, binning)
+        
+    if is_start_sup and is_loc_circ: # dim 1 sup
+        start_sup = 0
+        stop_sup =  bins_to_fill * binning - 1
+        fill = bin_tracks(tracks, locus["Chromosome"], start_sup, stop_sup, binning)
+        
+    to_concat = [fill, subtracks] if is_start_inf else [subtracks, fill]
+    subtracks = np.concatenate(to_concat)
+
+    return subtracks
+
 def compute_distance(locus1, locus2, center = "start"):
     """Returns the distance in base pairs between two position. None if not in the same chromosome."""
     if locus1["Chromosome"] != locus2["Chromosome"]:
@@ -226,7 +295,7 @@ def yield_random_pairs(pair, nb_rand_per_pos, nb_pos):
     for k in range(nb_rand_per_pos):
         random_pair = pair.copy()
         random_pair["Locus1"] = k * nb_pos + pair["Locus1"] 
-        random_pair["Locus2"] = k * nb_pos + pair["Locus2"] 
+        random_pair["Locus2"] = k * nb_pos + pair["Locus2"]
         yield random_pair
 
 ### Distance law adapted from Chromosight (Mathey-Doret et al., 2020)

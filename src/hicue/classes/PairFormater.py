@@ -1,7 +1,7 @@
 from .utils import *
 
 class PairFormater():
-    def __init__(self, positions, separate_by = "", center = "start", overlap = "strict", contact_range = [], separate_regions = "", detrending = "none", diag_mask = 0, min_dist = 0, has_trans = False, circulars = []):
+    def __init__(self, positions, separate_by = "", center = "start", overlap = "strict", contact_range = [], separate_regions = "", detrending = "none", diag_mask = 0, min_dist = 0, has_trans = False, circulars = [], loop = False):
         self._positions = positions
         self._separate_by = separate_by
         self._center = center
@@ -13,9 +13,10 @@ class PairFormater():
         self._min_dist = min_dist
         self._has_trans = has_trans
         self._circulars = circulars
+        self._loop = loop
     
     def stream_pairs(self, pair_queue, output_queues, threads):
-        """Streams the positions and the distance associated with the indexes in the pair_queue."""
+        """Streams the pairs and the distance associated with the indexes in the output_queues."""
         while True:
             try:
                 val = pair_queue.get(timeout=10)
@@ -41,6 +42,45 @@ class PairFormater():
                 if distance >= self._min_dist or i == j:
                     for queue in output_queues:
                         queue.put((pos_i, pos_j, i, j, distance, is_chrom_i_circular, is_chrom_j_circular))
+        join_queues(output_queues, threads = threads)
+
+    def compute_pair_attributes(self, i, j):
+        """Computes the pair attributes from the pair indexes."""
+        pos_i = self._positions.loc[i]
+        pos_j = self._positions.loc[j]
+        is_chrom_i_circular = pos_i["Chromosome"] in self._circulars
+        is_chrom_j_circular = pos_j["Chromosome"] in self._circulars
+        distance = compute_distance(pos_i, pos_j, self._center) if i != j else 0
+        if distance == None:
+           return (pos_i, pos_j, i, j, -1, is_chrom_i_circular, is_chrom_j_circular)
+        else:
+            if distance < 0:
+                i, j = j, i
+                pos_i, pos_j = pos_j, pos_i
+                is_chrom_i_circular, is_chrom_j_circular = is_chrom_j_circular, is_chrom_i_circular
+                distance = abs(distance)
+            if distance >= self._min_dist or i == j:
+                return (pos_i, pos_j, i, j, distance, is_chrom_i_circular, is_chrom_j_circular)
+        return None
+
+    def stream_pairs_from_positions(self, output_queues, threads):
+        """Streams the positions and the distance associated with the indexes in the output_queues."""
+        indexes = set()
+        for index in self._positions.index:
+            if index in indexes:
+                continue
+            if self._loop:
+                for index2 in indexes:
+                    pair_attributes = self.compute_pair_attributes(index, index2)
+                    if pair_attributes is not None:
+                        for queue in output_queues:
+                            queue.put(pair_attributes)
+            else:
+                pair_attributes = self.compute_pair_attributes(index, index)
+                if pair_attributes is not None:
+                    for queue in output_queues:
+                        queue.put(pair_attributes)
+            indexes.add(index)
         join_queues(output_queues, threads = threads)
 
     @staticmethod
@@ -95,7 +135,10 @@ class PairFormater():
                     diag_mask = self._diag_mask
                 )   
         
-        self.stream_pairs(pair_queue, [to_separate_queue], threads = threads)
+        if pair_queue is not None:
+            self.stream_pairs(pair_queue, [to_separate_queue], threads = threads)
+        else:
+            self.stream_pairs_from_positions([to_separate_queue], threads = threads)
 
         # joining
         join_workers(separators)
