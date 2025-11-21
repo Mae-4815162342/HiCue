@@ -137,8 +137,11 @@ class TracksAnnotator():
     def annotate_position(self, index, position):
         """Annotates a position from a track file. Adds a columns called Tracks.
         If the track requires selecting that can be computed at this step, the position can be discarded."""  #TODO: add tracks options
-        position["Tracks"]  = self._tracks.stats(position["Chromosome"], position["Start"], position["End"])[0]
-        position["Tracks"] = position["Tracks"] or np.nan
-        if self._threshold is not None:
-            return position if (self._min_max == "min" and position["Tracks"] >= self._threshold) or (self._min_max == "max" and position["Tracks"] <= self._threshold) else None
+        if position["Chromosome"] in self._tracks.chroms():
+            position["Tracks"]  = self._tracks.stats(position["Chromosome"], position["Start"] - 1, position["End"] - 1)[0]
+            position["Tracks"] = position["Tracks"] or np.nan
+            if self._threshold is not None:
+                return position if (self._min_max == "min" and position["Tracks"] >= self._threshold) or (self._min_max == "max" and position["Tracks"] <= self._threshold) else None
+        else:
+            position["Tracks"] = np.nan
         return position

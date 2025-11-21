@@ -23,7 +23,7 @@ class RandomSelector():
                     threads = threads,
                     input_queue = positions_queue,
                     output_queues = [random_positions_queue],
-                    nb_pos = np.max(positions.index),
+                    nb_pos = np.max(positions.index) + 1,
                     center = self._center,
                     nb_rand_per_pos = self._nb_rand_per_pos,
                     selection_window = self._selection_window,

@@ -167,13 +167,15 @@ class MatrixExtractor():
         # joining         
         join_workers(extracters)
         
-        join_queues([raw_submatrices_queue, display_submatrices_queue], threads = threads)
+        join_queues([raw_submatrices_queue], threads = threads)
 
         join_workers(formaters)
         
         join_queues(formater_output_queues, threads = threads)
         
         join_workers(aggregators)
+
+        join_queues([display_submatrices_queue]  + displayer_output, threads = threads)
 
         join_workers(displayers)
 

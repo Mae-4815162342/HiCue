@@ -32,6 +32,8 @@ class Pileup():
     def get_matrix(self, window):
         """Returns the numpy array of the pileup of matrix_size."""
         with self.pileup_lock:
+            if window not in self._size:
+                return None
             if self._size[window] > 0:
                 matrix = None
                 match self._mode:

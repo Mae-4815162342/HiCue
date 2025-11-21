@@ -53,6 +53,9 @@ class Extracter():
                                     is_loc2_circ = bool(pair['Chrom2_circular']),
                                     center = self._center, 
                                     raw = self._raw)
+            if submatrix is None:
+                print(f"Pair {pair['Locus1']}:{pair['Locus2']} could not be included in pileup for window {window} due to the following: chromosome ({self._positions.loc[pair['Locus1']]['Chromosome']}) absent from cool.") # TODO write in log
+                continue
             if self._tracks:
                 subtracks1 = extract_tracks(self._tracks, 
                                     self._positions.loc[pair['Locus1']],
@@ -69,6 +72,5 @@ class Extracter():
                                         is_loc_circ = bool(pair['Chrom2_circular']),
                                         center = self._center)
                     submatrix = np.concatenate([submatrix, [subtracks2]], axis = 0)
-                
             yield window, submatrix
     

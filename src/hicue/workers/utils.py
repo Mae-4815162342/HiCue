@@ -64,11 +64,18 @@ def extract_window(cool, locus1, locus2, binning, window, is_loc1_circ = False, 
             start1 = max(locus1["Start"], locus1["End"]) if locus1["Strand"] == 1 else min(locus1["Start"], locus1["End"])
             start2 = max(locus2["Start"], locus2["End"]) if locus2["Strand"] == 1 else min(locus2["Start"], locus2["End"])
 
+    if locus1["Chromosome"] not in cool.chromsizes or locus2["Chromosome"] not in cool.chromsizes:
+        return None
     chrom_size1 = cool.chromsizes[locus1["Chromosome"]]
     chrom_size2 = cool.chromsizes[locus2["Chromosome"]]
 
     start1 = adjust_locus(start1, chrom_size1, is_circ_chrom = is_loc1_circ)
     start2 = adjust_locus(start2, chrom_size2, is_circ_chrom = is_loc2_circ)
+
+    if locus1["Name"] == "cspE" and locus2["Name"] == "leuB":
+        print("locus:")
+        print(locus1["Name"], start1)
+        print(locus2["Name"], start2)
 
     start1 = start1 + 1 if start1 % binning == 0 else start1
     start2 = start2 + 1 if start2 % binning == 0 else start2

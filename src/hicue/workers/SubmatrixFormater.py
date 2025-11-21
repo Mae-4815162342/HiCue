@@ -116,6 +116,31 @@ class SubmatrixFormater():
             ps = self.get_ps(locus1["Chromosome"], locus2["Chromosome"])
             detrended_submatrix = detrend_submatrix(submatrix, locus1, locus2, self._binning, ps, center = self._center)
         return detrended_submatrix
+    
+    def flip(self, submatrix, subtracks, locus1, locus2, is_contact = False):
+        """Flips a submatrix in the required axis."""
+        # same position, flipped if sense is -1
+        result_matrix = submatrix
+        result_tracks = subtracks
+        if not is_contact:
+            if locus1['Strand'] == -1:
+                result_matrix = np.flip(result_matrix)
+                if result_tracks is not None:
+                    result_tracks[0] = np.flip(result_tracks[0])
+        
+        else:
+            # flipping along locus 1 axis
+            if locus1['Strand'] == -1:
+                result_matrix = np.flip(result_matrix, 0)
+                if result_tracks is not None:
+                    result_tracks[0] = np.flip(result_tracks[0])
+
+            # flipping along locus 2 axis
+            if locus2['Strand'] == -1:
+                result_matrix = np.flip(result_matrix, 1)
+                if result_tracks is not None:
+                    result_tracks[1] = np.flip(result_tracks[1])
+        return result_matrix, result_tracks
 
     def format(self, matrix, pair):
         """Applies all formating operations to a submatrix."""
@@ -137,11 +162,8 @@ class SubmatrixFormater():
             result_matrix = self.detrend(result_matrix, locus1, locus2, is_trans = pair["Trans"])
             
         # flipping if required and on diagonal
-        if self._flip and pair['Locus1'] == pair['Locus2'] and self._positions.loc[pair['Locus1']]['Strand'] == -1:
-            result_matrix = np.flip(result_matrix)
-            if tracks is not None:
-                for i in range(len(tracks)):
-                    tracks[i] = np.flip(tracks[i])
+        if self._flip:
+            result_matrix, tracks = self.flip(result_matrix, tracks, locus1, locus2, is_contact=pair['Locus1']!=pair['Locus2'])
 
         if tracks is not None:
             result_matrix = np.concatenate([result_matrix, tracks], axis = 0)

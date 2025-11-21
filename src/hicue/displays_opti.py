@@ -17,7 +17,7 @@ def create_folder_path(path):
                 os.mkdir(current_path)
 
 def adjust_extents(ax, chrom1, chrom2, is_chrom1_circ, is_chrom2_circ, chromsizes={}):
-    min, max = ax.get_xlim()
+    min, max = np.min(ax.get_xlim()), np.max(ax.get_xlim())
     extent_x = [item.get_text() for item in ax.get_xticklabels() if item._x >= min and item._x < max]
     x_ticks = [tick for tick in ax.get_xticks() if tick >= min and tick < max]
     for i in range(len(extent_x)):
@@ -27,7 +27,7 @@ def adjust_extents(ax, chrom1, chrom2, is_chrom1_circ, is_chrom2_circ, chromsize
             extent_x[i] = str(int(extent_x[i]) - chromsizes[chrom2]//1000) if is_chrom2_circ else " "
     ax.set(xticks=x_ticks, xticklabels=extent_x)
 
-    max, min = ax.get_ylim()
+    min, max = np.min(ax.get_ylim()), np.max(ax.get_ylim())
     extent_y = [item.get_text() for item in ax.get_yticklabels() if item._y > min and item._y <= max]
     y_ticks = [tick for tick in ax.get_yticks() if tick > min and tick <= max]
     for i in range(len(extent_y)):
@@ -37,11 +37,55 @@ def adjust_extents(ax, chrom1, chrom2, is_chrom1_circ, is_chrom2_circ, chromsize
             extent_y[i] = str(int(extent_y[i]) - chromsizes[chrom1]//1000) if is_chrom1_circ else " "
     ax.set(yticks=y_ticks, yticklabels=extent_y)
 
-def plot_map(ax, matrix, loc1, loc2, window, locus1, locus2, is_chrom1_circ, is_chrom2_circ, title="", display_sense="forward", chromsizes={}, display_strand=False, flipped = False, strand_level=1.2, cmap=None, color="afmhot_r", adjust=True, show_title=True, log=True):
+def plot_strands(ax, locus1, locus2, window, is_contact = False, display_sense = "forward", flip = False, strand_level = 1.2, adjustment = 0.9):
+    """Plots the direction of the positions strand around the matrix axis."""
+    pos1 = min(locus1["Start"], locus1["End"]) if locus1["Strand"] == 1 else max(locus1["Start"], locus1["End"])
+    pos2 = min(locus2["Start"], locus2["End"]) if locus2["Strand"] == 1 else max(locus2["Start"], locus2["End"])
+
+    flip1, flip2 = locus1["Strand"] == -1 and not flip, locus2["Strand"] == -1 and not flip
+    x_right = [ARROW_RIGHT, "left"]
+    x_left = [ARROW_LEFT, "right"]
+    y_up = [ARROW_UP, "bottom"]
+    y_down = [ARROW_DOWN, "top"]
+
+    if not is_contact:
+        if locus1["Strand"] != 0:
+            arrow = x_right
+            match display_sense:
+                case "forward":
+                    arrow = x_left if locus1["Strand"] == -1 and not flip else x_right
+                    to_add = - window if flip and locus1["Strand"] == -1 else window
+                case "reverse":
+                    arrow = x_right if locus1["Strand"] == -1 and not flip else x_left
+                    to_add = window if flip and locus1["Strand"] == -1 else - window
+            ax.text(pos2//1000, (pos1 + to_add * strand_level)//1000, arrow[0], horizontalalignment=arrow[1], fontsize=20)
+
+    else:
+        if locus2["Strand"] != 0:
+            arrow = x_right
+            match display_sense:
+                case "forward":
+                    arrow = x_left if locus2["Strand"] == -1 and not flip else x_right
+                    to_add = - window if flip and locus1["Strand"] == -1 else window
+                case "reverse":
+                    arrow = x_right if locus2["Strand"] == -1 and not flip else x_left
+                    to_add = window if flip and locus1["Strand"] == -1 else -window
+            ax.text(pos2//1000, (pos1 + to_add * strand_level)//1000, arrow[0], horizontalalignment=arrow[1], fontsize=20)
+
+        if locus1["Strand"] != 0:
+            arrow = y_down
+            match display_sense:
+                case "forward":
+                    arrow = y_up if locus1["Strand"] == -1 and not flip else y_down
+                    to_add = - window if flip and locus2["Strand"] == -1 else window
+                case "reverse":
+                    arrow = y_down if locus1["Strand"] == -1 and not flip else y_up
+                    to_add = window if flip and locus2["Strand"] == -1 else - window
+            ax.text((pos2 + to_add * (strand_level * adjustment) )//1000, pos1//1000 , arrow[0], verticalalignment=arrow[1], fontsize=20)
+
+def plot_map(ax, matrix, loc1, loc2, window, locus1, locus2, is_chrom1_circ, is_chrom2_circ, title="", display_sense="forward", chromsizes={}, display_strand=False, flipped = False, cmap=None, color="afmhot_r", adjust=True, show_title=True, log=True, strand_level = 1.2, adjustment = 0.9):
     """Plots a single matrix on the provided axis"""
     is_contact = loc1 != loc2
-    flipped_pos = locus1["Strand"] == -1 and flipped
-    strand = not is_contact and locus1["Strand"] == -1
     pos1 = min(locus1["Start"], locus1["End"]) if locus1["Strand"] == 1 else max(locus1["Start"], locus1["End"])
     pos2 = min(locus2["Start"], locus2["End"]) if locus2["Strand"] == 1 else max(locus2["Start"], locus2["End"])
 
@@ -55,32 +99,46 @@ def plot_map(ax, matrix, loc1, loc2, window, locus1, locus2, is_chrom1_circ, is_
     vmin = cmap[0] if cmap != None else None
     vmax = cmap[1] if cmap != None else None
 
-    if flipped_pos:
-        display_matrix = np.flip(display_matrix)
-
     match display_sense:
         case "forward":
-            mat = ax.imshow(display_matrix, extent=[(pos2 - window)//1000, (pos2 + window)//1000, (pos1 + window)//1000, (pos1 - window)//1000], cmap=color, vmin=vmin, vmax=vmax)
+            y_extent = [(pos1 + window)//1000, (pos1 - window)//1000] if locus1["Strand"] != -1 or not flipped else [(pos1 - window)//1000, (pos1 + window)//1000]
+            x_extent = [(pos2 - window)//1000, (pos2 + window)//1000] if locus2["Strand"] != -1 or not flipped else [(pos2 + window)//1000, (pos2 - window)//1000]
+            mat = ax.imshow(display_matrix, extent=x_extent + y_extent, cmap=color, vmin=vmin, vmax=vmax)
         case "reverse":
-            mat = ax.imshow(np.flip(display_matrix), extent=[(pos2 + window)//1000, (pos2 - window)//1000, (pos1 - window)//1000, (pos1 + window)//1000], cmap=color, vmin=vmin, vmax=vmax)
+            y_extent = [(pos1 - window)//1000, (pos1 + window)//1000] if locus1["Strand"] != -1 or not flipped else [(pos1 + window)//1000, (pos1 - window)//1000]
+            x_extent = [(pos2 + window)//1000, (pos2 - window)//1000] if locus2["Strand"] != -1 or not flipped else [(pos2 - window)//1000, (pos2 + window)//1000]
+            mat = ax.imshow(np.flip(display_matrix), extent=x_extent + y_extent, cmap=color, vmin=vmin, vmax=vmax)
     
     chrom1 = locus1["Chromosome"]
     chrom2 = locus2["Chromosome"]
     if adjust:
         adjust_extents(ax, chrom1, chrom2, is_chrom1_circ, is_chrom2_circ, chromsizes)
 
-    if display_strand and locus1["Strand"] != 0:
-        match display_sense:
-            case "forward":
-                transcription_sens = ARROW_LEFT if strand else ARROW_RIGHT
-                arrow_alignment = "right" if strand else "left"
-                pos_up = (pos1 + window * strand_level)//1000
-            case "reverse":
-                transcription_sens = ARROW_RIGHT if strand else ARROW_LEFT
-                arrow_alignment = "left" if strand else "right"
-                pos_up = (pos1 - window * strand_level)//1000
-        ax.text(pos2//1000, pos_up, transcription_sens, horizontalalignment=arrow_alignment, fontsize=20)
+    if display_strand:
+        plot_strands(ax, locus1, locus2, window, is_contact=pos1!=pos2, display_sense=display_sense, flip = flipped, strand_level = strand_level, adjustment = adjustment)
+
     return mat
+
+def plot_tracks(tracks, ax_tracks, start, stop, axis = "horizontal", xlabel = "", ylabel = "", flip = False):
+    """Plots tracks on the track axis aligned between start and stop, on the horizontal or vertical axis."""
+    index = np.array([i/len(tracks) * (stop - start) + start for i in range(len(tracks))])
+
+    match axis:
+        case "horizontal":
+            index = np.flip(index) if flip else index
+            ax_tracks.plot(index, tracks)
+            if len(ylabel) > 0:
+                ax_tracks.set_ylabel(ylabel)
+            if len(xlabel) > 0:
+                ax_tracks.set_xlabel(xlabel)
+        case "vertical":
+            index = np.flip(index) if not flip else index
+            ax_tracks.plot(tracks, index)
+            ax_tracks.yaxis.tick_right()
+            if len(ylabel) > 0:
+                ax_tracks.set_xlabel(ylabel)
+            if len(xlabel) > 0:
+                ax_tracks.set_ylabel(xlabel)
 
 async def display_submatrix(matrix, pair, window, binning = 1000, outfolder="", positions = None, output_format=['pdf'], chromsizes = {}, display_strand=False, flipped = False, display_sense="forward", cmap = None, color = "afmhot_r", track_unit = ""):
         """Displays a single submatrix for a pair of positions."""
@@ -134,37 +192,30 @@ async def display_submatrix(matrix, pair, window, binning = 1000, outfolder="", 
             ax_cb = plt.subplot(gs[1, width - 1])
             plt.colorbar(mat, fraction=0.01, cax=ax_cb)
             
-            flip_tracks = display_sense == "reverse"
+            flip1, flip2 = pos1["Strand"] == -1, pos2["Strand"] == -1
 
-            track_labeling = track_unit
+            track_labelling = track_unit
+            ax_tracks = plt.subplot(gs[4, 0], sharex=ax)
+            plot_xlabel =  "\n" + f"{pos2['Chromosome']} Genomic coordinates (in kb)"
+            plot_xlabel += "\n" + x_label if len(x_label) > 0 else ""
 
-            # TODO write plot_tracks
+            if not is_contact:
+                xstart, xstop = ax.get_xlim()
+                plot_tracks(subtracks[0], ax_tracks, xstart, xstop, axis = "horizontal", xlabel = plot_xlabel, ylabel = track_labelling, flip = (display_sense == "reverse"))
 
-            # first track
-            ax_track1 = plt.subplot(gs[4, 0], sharex=ax)
-            track = subtracks[0]
-            xstart, xstop = ax.get_xlim()
-            index1 = [i/len(track) * (xstop - xstart) + xstart for i in range(len(track))]
-            index1 = np.flip(index1) if flip_tracks else index1
-            ax_track1.plot(index1, track)
-            ax_track1.set_ylabel(track_labeling)
+            else:
+                # first track
+                ax_tracks1 = plt.subplot(gs[:4, 1],sharey = ax)
+                ystart, ystop = ax.get_ylim()
+                plot_tracks(subtracks[0], ax_tracks1, ystart, ystop, axis = "vertical", ylabel = track_labelling, flip = (display_sense == "reverse"))
 
-            # second track
-            if is_contact:
-                ax_track2 = plt.subplot(gs[:4, 1],sharey = ax)
-                track = subtracks[1]
-                xstart, xstop = ax.get_ylim()
-                index2 = [i/len(track) * (xstop - xstart) + xstart for i in range(len(track))]
-                index2 = index2 if flip_tracks else np.flip(index2)
-                ax_track2.plot(track, index2)
-                ax_track2.yaxis.tick_right()
-                ax_track2.set_xlabel(track_labeling)
+                # second track
+                if len(subtracks) > 1:
+                    xstart, xstop = ax.get_xlim()
+                    plot_tracks(subtracks[1], ax_tracks, xstart, xstop, axis = "horizontal", xlabel = plot_xlabel, ylabel = track_labelling, flip = (display_sense == "reverse"))
 
             adjust_extents(ax, pos1["Chromosome"], pos2["Chromosome"], pair["Chrom1_circular"], pair["Chrom2_circular"], chromsizes)
 
-            plot_xlabel =  "\n" + f"{pos2['Chromosome']} Genomic coordinates (in kb)"
-            plot_xlabel += "\n" + x_label if len(x_label) > 0 else ""
-            ax_track1.set_xlabel(plot_xlabel)
             plot_ylabel =  f"{pos1['Chromosome']} Genomic coordinates (in kb)"
             plot_ylabel = y_label + "\n" + plot_ylabel if len(y_label) > 0 else plot_ylabel
             ax.set_ylabel(plot_ylabel)
@@ -213,7 +264,7 @@ async def display_batch_submatrices(submatrices, positions, window, title = "", 
         index.append([map_title, name])
         
         ax = plt.subplot(gs[i, j])
-        plot_map(ax, submatrix, loc1, loc2, window, pos1, pos2, is_chrom1_circ, is_chrom2_circ, title=map_title, display_sense=display_sense, chromsizes = chromsizes, display_strand=display_strand, flipped = flipped, strand_level=1.6, cmap=cmap, color=color)
+        plot_map(ax, submatrix, loc1, loc2, window, pos1, pos2, is_chrom1_circ, is_chrom2_circ, title=map_title, display_sense=display_sense, chromsizes = chromsizes, display_strand=display_strand, flipped = flipped, strand_level=1.6, adjustment= 0.6, cmap=cmap, color=color)
 
         if i == rows - 1 or i >= nb_matrices // rows:
             ax.set_xlabel('\nGenomic\ncoordinates in kb')
@@ -241,6 +292,9 @@ async def display_pileup(pileup, sep_id, cool_name = "", patch_detrending = {}, 
 
     for window in windows:
         pileup_matrix = pileup.get_matrix(window)
+        if pileup_matrix is None:
+            print(f"Empty pileup for {sep_id} with window size {window}bp.") # TODO add to log
+            continue
         track_pileup = []
         if pileup.has_tracks(window):
             square_pileup_matrix = pileup_matrix[:pileup.get_size(window)]

@@ -39,3 +39,9 @@ default_display = {
     "indiv_cmap_limits": None,
     "indiv_cmap_color": "afmhot_r"
 }
+
+# GTF conversion
+GTF_FIELDS = {
+    "Name":"gene_name",
+    "ID": "gene_id"
+}

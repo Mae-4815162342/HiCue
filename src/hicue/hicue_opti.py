@@ -216,7 +216,7 @@ def tracks(cool_files, tracks, outpath, log = None, **params):
     ## Matrix extraction
     matrix_extractor = MatrixExtractorLauncher(cool_files,
                                                tracks = tracks,
-                                               nb_pos = np.max(positions.index),
+                                               nb_pos = np.max(positions.index) + 1,
                                                compute_pileups = params["pileup"],
                                                binnings = params["binnings"], 
                                                windows = params["windows"],

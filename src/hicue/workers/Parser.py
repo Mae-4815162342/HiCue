@@ -86,13 +86,13 @@ class Parser():
         if record_type and fields[2] != record_type:
             return None
 
-        subfields = [f.split("=") for f in fields[8].split(";")]
-        qualifiers = {sf[0]:sf[1] for sf in subfields}
+        subfields = [f.split("=") if "=" in f else [subf for subf in f.split(" ") if len(subf)> 0] for f in fields[8].split(";")]
+        qualifiers = {sf[0]:sf[1] for sf in subfields if len(sf) > 1}
         record = {
             "Chromosome": fields[0],
             "Start": int(fields[3]),
             "End": int(fields[4]),
-            "Name": qualifiers["Name"] if "Name" in qualifiers else qualifiers["ID"],
+            "Name": qualifiers["Name"] if "Name" in qualifiers else qualifiers[GTF_FIELDS["Name"]] if GTF_FIELDS["Name"] in qualifiers else qualifiers["ID"] if "ID" in qualifiers else qualifiers[GTF_FIELDS["ID"]],
             "Strand": -1 if fields[6] == '-' else 1 if fields[6] == '+' else 0
         }
         hash = f"{record['Chromosome']},{record['Start']},{record['End']},{record['Strand']}".encode("ascii")

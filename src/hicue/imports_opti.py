@@ -21,3 +21,5 @@ import matplotlib.pyplot as plt
 # constants
 ARROW_LEFT = "←"
 ARROW_RIGHT = "→"
+ARROW_UP = "↑"
+ARROW_DOWN = "↓"
