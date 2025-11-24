@@ -159,7 +159,8 @@ def tracks(cool_files, tracks, outpath, log = None, **params):
         "display_sense" : params["display_sense"],
         "flipped": params["flip"],
         "cmap": params["indiv_cmap_limits"],
-        "color": params["indiv_cmap_color"]
+        "color": params["indiv_cmap_color"],
+        "display_tracks": True
     }
 
     random_params = {
