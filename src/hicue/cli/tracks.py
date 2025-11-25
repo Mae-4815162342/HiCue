@@ -1,11 +1,7 @@
-import click
+from hicue.utils import *
+from hicue.cli.custom_types import *
 
-from .imports import *
-from hicue.utils_opti import *
-
-from .custom_types import COOL, INT_LIST, STR_LIST, GFF_FILE, SEPARATOR_LIST, TRACK_FILE
-
-import hicue.hicue_opti as h
+import hicue.hicue as h
 
 @click.command("tracks")
 @click.argument("outpath", type=str)
@@ -14,7 +10,7 @@ import hicue.hicue_opti as h
 @click.option('-t', '--threshold', type=(click.Choice(['min', 'max']), float), help="Threshold applied to the tracks for selection in the tracks' unit. If 'min', the threshold is considered as the minimum value for tracks. If 'max' is selected, the threshold is the maximum value.")
 @click.option('-p', '--percentage', type=(click.Choice(['high', 'low']), click.IntRange(0, 100)), help="Threshold applied to the tracks for selection in percent. The first parameter indicates whether to take the percentage of high or low values. The second parameter is the percentage between 0 and 100.")# Will be applied after the threshold if --threshold is provided.")
 @click.option('--gff', type=GFF_FILE, help="Gff file provided for the position file automatic annotation if the file is a bed2d. The positions considered for pileup are all the genes contained in the bed2d files. For more options, use the hicue annotate command.")
-@click.option('--track_unit', type=str, default="", help="Label of the tracks unit axis in display. Default value: Tracks")
+@click.option('--track_unit', type=str, default="", help="Label of the tracks unit axis in display.")
 @click.option('-b', '--binnings', type=INT_LIST, default="1000", help="Bin size in bp. Used only if the provided cool files are in mcool format. Several bin sizes can be provided as a comma-separated list. Default value: 1000.")
 @click.option('-w', '--windows', type=INT_LIST, default="30000", help="Window size for sub-matrices extraction in bp. Several window sizes can be provided as a comma-separated list. Default value: 30000.")
 @click.option('-d', '--detrending',type=click.Choice(['patch', 'ps', 'none'], case_sensitive=False), default='none', help='Detrending option. Default value: none.')

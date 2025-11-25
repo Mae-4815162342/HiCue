@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hicue"
-version = "0.3.5"
+version = "0.4.2"
 authors = [
   { name="Maelys Delouis", email="maelys.delouis@pasteur.fr" },
 ]
@@ -87,7 +87,7 @@ Homepage = "https://github.com/Mae-4815162342/HiCue"
 Issues = "https://github.com/Mae-4815162342/HiCue/issues"
 
 [project.scripts]
-hicue = "hicue.cli:cli"
+hicue = "hicue.cli.cli:cli"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hicue"]

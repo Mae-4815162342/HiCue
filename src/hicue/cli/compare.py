@@ -1,9 +1,5 @@
-# import logging
-import click
-
-from .imports import *
-
-from .custom_types import COOL_PAIR, INT_LIST, STR_LIST, POSITION_FILE, GFF_FILE
+from hicue.imports import *
+from hicue.cli.custom_types import *
 
 import hicue.hicue as h
 

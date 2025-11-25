@@ -1,4 +1,4 @@
-from .imports import *
+from hicue.imports import *
 
 
 def initialize_globals():
@@ -50,7 +50,7 @@ class DisplayBatch(threading.Thread):
     def add_to_batch(self, window, sep_id, **params):
         """Adds new object params to the current batch"""
         for param in self._params_to_batch:
-            if param not in self._statics:
+            if param not in self._statics and param in params:
                 self._statics[param] = params[param]
         if f"{window}.{sep_id}" not in self._current_batch:
             self._current_batch[f"{window}.{sep_id}"] = []

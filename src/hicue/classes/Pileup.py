@@ -1,4 +1,4 @@
-from .imports import *
+from hicue.utils import *
 
 class Pileup():    
     pileup_lock = threading.Lock()
@@ -65,9 +65,6 @@ class Pileup():
     def has_tracks(self, window):
         """Getter for size"""
         return self._tracks[window] > 0
-    
-    def is_directed(axis=None):
-        """Returns the direction existence depending of the axis if provided."""
     
     def get_nb_matrices(self, window):
         """Getter for nb_matrices"""

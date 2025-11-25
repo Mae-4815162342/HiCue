@@ -1,8 +1,4 @@
-import click
-
-from .imports import *
-
-from hicue.parser import *
+from hicue.utils import *
 
 # accepts a list of cool files or a file containing a list of cool, one per line
 class coolType(click.ParamType):
@@ -132,23 +128,10 @@ class PositionFileType(click.ParamType):
         if not os.path.isfile(value):
             self.fail(f"{value} is not an existing file.")
         extension = value.split('.')[-1].lower()
-        if extension not in ["gff", "bed", "bed2d"]:
+        if extension not in ["gff", "gff3", "gtf", "bed", "bed2d"]:
             self.fail(f"{value} extension is not recognized (gff, bed, or bed2d expected)")
         return extension, value
     
-class Position2dFileType(click.ParamType):
-    name="position file"
-
-    #  accepts bed and gff files. Returns a tuple indicating the type and path of the file
-    def convert(self, value, param, ctx):
-        if not os.path.isfile(value):
-            self.fail(f"{value} is not an existing file.")
-        try:
-            parse_bed2d_file(value)
-            return value
-        except Exception as e:
-            self.fail(f"{value} is not an valid 2d position file (bed2d format expected) : {e}")
-
 class GffFileType(click.ParamType):
     name="gff file"
 
@@ -185,6 +168,5 @@ INT_LIST = IntListType()
 STR_LIST = StrListType()
 SEPARATOR_LIST = SeparatorListType()
 POSITION_FILE = PositionFileType()
-POSITION2D_FILE = Position2dFileType()
 TRACK_FILE = TrackFileType()
 GFF_FILE = GffFileType()

@@ -1,4 +1,4 @@
-from .imports import *
+from hicue.imports import *
 
 # global parameters
 global position_id
