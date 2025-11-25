@@ -1,4 +1,4 @@
-from .imports import *
+from hicue.imports import *
 
 def initialize_globals():
     pass

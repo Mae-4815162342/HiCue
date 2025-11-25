@@ -1,4 +1,4 @@
-from .utils import *
+from hicue.utils import *
 
 def initialize_globals():
     pass

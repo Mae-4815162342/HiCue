@@ -1,0 +1,3 @@
+/data/Maelys/datas/cool_files/PGA_Cm10_trans_2025/PGA_Cm10_trans_2025.mcool::resolutions/5000
+/data/Maelys/datas/cool_files/PGA_MetOH_trans_2025/PGA_MetOH_trans_2025.mcool::resolutions/5000
+/data/Maelys/datas/cool_files/PGA_Rif50_trans_2025/PGA_Rif50_trans_2025.mcool::resolutions/5000

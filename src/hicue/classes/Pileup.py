@@ -1,4 +1,4 @@
-from .imports import *
+from hicue.utils import *
 
 class Pileup():    
     pileup_lock = threading.Lock()

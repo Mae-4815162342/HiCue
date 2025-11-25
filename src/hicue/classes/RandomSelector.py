@@ -1,4 +1,4 @@
-from .utils import *
+from hicue.utils import *
 
 class RandomSelector():
     def __init__(self, center = "start", selection_window = 100000, nb_rand_per_pos = 1):

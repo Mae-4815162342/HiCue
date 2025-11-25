@@ -1,5 +1,4 @@
-from .utils import *
-
+from hicue.utils import *
 from hicue.classes.PositionList import PositionList
 
 class TrackReader():

@@ -1,4 +1,4 @@
-from .imports import *
+from hicue.imports import *
 
 class PositionList():
     position_columns = ["Name", "Chromosome", "Start", "End", "Strand", "Tracks"]

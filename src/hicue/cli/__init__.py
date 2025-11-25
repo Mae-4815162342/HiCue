@@ -1,1 +1,1 @@
-from .cli import *
+from hicue.cli import *

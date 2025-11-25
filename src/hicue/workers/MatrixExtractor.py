@@ -1,4 +1,5 @@
-from .utils import *
+from hicue.displays import *
+from hicue.classes.Pileup import Pileup
 
 def initialize_globals():
     pass
@@ -116,6 +117,7 @@ class MatrixExtractor():
             )
         
         displayers = []
+        displayer_output = []
         if not self._randoms:
             displayer_output = [Queue()] if self._display_loci else []
             if self._display_batch:

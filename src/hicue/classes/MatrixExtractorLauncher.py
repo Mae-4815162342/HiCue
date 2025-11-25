@@ -1,4 +1,4 @@
-from .utils import *
+from hicue.utils import *
 
 class MatrixExtractorLauncher():
     def __init__(self, cool_files, binnings = [], **extparams):

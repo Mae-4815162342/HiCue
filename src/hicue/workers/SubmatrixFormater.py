@@ -1,4 +1,4 @@
-from .utils import *
+from hicue.utils import *
 
 global chrom_ps
 global trans_av

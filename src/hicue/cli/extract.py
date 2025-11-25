@@ -1,19 +1,14 @@
-# import logging
-import click
+from hicue.utils import *
+from hicue.cli.custom_types import *
 
-from .imports import *
-from hicue.utils_opti import *
-
-from .custom_types import COOL, INT_LIST, STR_LIST, POSITION_FILE, GFF_FILE, SEPARATOR_LIST
-
-import hicue.hicue_opti as h
+import hicue.hicue as h
 
 @click.command("extract")
 @click.argument("outpath", type=str)
 @click.argument('positions', type=POSITION_FILE)
 @click.argument("cool_files", type=COOL)
 @click.option('--gff', type=GFF_FILE, help="Gff file provided for the position file automatic annotation if the file is a bed2d. The positions considered for pileup are all the genes contained in the bed2d files. For more options, use the hicue annotate command.")
-@click.option('--tracks', type=GFF_FILE, help="Track file provided for the position file automatic annotation if the file is a bed2d. The positions considered for pileup are all the genes contained in the bed2d files. For more options, use the hicue annotate command.") # TODO re-write
+@click.option('--tracks', type=TRACK_FILE, help="Track file provided for the position file automatic annotation if the file is a bed2d. The positions considered for pileup are all the genes contained in the bed2d files. For more options, use the hicue annotate command.") # TODO re-write
 @click.option('-b', '--binnings', type=INT_LIST, default="1000", help="Bin size in bp. Used only if the provided cool files are in mcool format. Several bin sizes can be provided as a comma-separated list. Default value: 1000.")
 @click.option('-w', '--windows', type=INT_LIST, default="30000", help="Window size for sub-matrices extraction in bp. Several window sizes can be provided as a comma-separated list. Default value: 30000.")
 @click.option('-d', '--detrending',type=click.Choice(['patch', 'ps', 'none'], case_sensitive=False), default='none', help='Detrending option. Default value: none.')
@@ -50,7 +45,7 @@ def extract(ctx, outpath, positions, cool_files, **params):
         
         # oppening log
         if not os.path.exists(outpath):
-                os.mkdir(outpath)
+                create_folder_path(outpath)
         log = open(f"{outpath}/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_log.txt", 'w')
         log.write(f"Extract mode.\nExecuting command: hicue {' '.join(sys.argv[1:])}\n")
         log.write(f"""Extracting from {cool_files}

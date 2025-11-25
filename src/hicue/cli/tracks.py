@@ -1,11 +1,7 @@
-import click
+from hicue.utils import *
+from hicue.cli.custom_types import *
 
-from .imports import *
-from hicue.utils_opti import *
-
-from .custom_types import COOL, INT_LIST, STR_LIST, GFF_FILE, SEPARATOR_LIST, TRACK_FILE
-
-import hicue.hicue_opti as h
+import hicue.hicue as h
 
 @click.command("tracks")
 @click.argument("outpath", type=str)

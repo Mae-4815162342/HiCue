@@ -1,4 +1,4 @@
-from .utils import *
+from hicue.utils import *
 
 class PairFormater():
     def __init__(self, positions, separate_by = "", center = "start", overlap = "strict", contact_range = [], separate_regions = "", detrending = "none", diag_mask = 0, min_dist = 0, has_trans = False, circulars = [], loop = False):
