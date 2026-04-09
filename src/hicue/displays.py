@@ -845,14 +845,14 @@ async def display_pileup(
             match display_sense:
                 case "forward":
                     mat = plt.imshow(
-                        pileup_sense, # np.log10(pileup_sense),
+                        np.log10(pileup_sense),
                         extent=[-window // 1000, window // 1000,
                                  window // 1000, -window // 1000],
                         cmap=cmap_color, vmin=vmin, vmax=vmax,
                     )
                 case "reverse":
                     mat = plt.imshow(
-                        pileup_sense, # np.log10(pileup_sense),
+                        np.log10(pileup_sense),
                         extent=[window // 1000, -window // 1000,
                                 -window // 1000,  window // 1000],
                         cmap=cmap_color, vmin=vmin, vmax=vmax,

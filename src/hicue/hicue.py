@@ -37,7 +37,8 @@ def extract(cool_files, positions, outpath, log = None, **params):
     random_params = {
         "center" : params["center"],
         "selection_window": params['rand_max_dist'],
-        "nb_rand_per_pos" : params['nb_pos']
+        "nb_rand_per_pos" : params['nb_pos'],
+        "random_jitter": params['random_jitter']
     }
 
     pileup_display_args = {
@@ -64,7 +65,7 @@ def extract(cool_files, positions, outpath, log = None, **params):
     if params['tracks']:
         annotation['tracks'] = params['tracks']
     
-    reader = reader = Reader(pos_file, pos_type, annotation_files = annotation, save_to = "", loop = params['loops'], record_type = params['record_type'], overlap = params['overlap'])# TODO: option on verbose annotation
+    reader = Reader(pos_file, pos_type, annotation_files = annotation, save_to = "", loop = params['loops'], record_type = params['record_type'], overlap = params['overlap'])# TODO: option on verbose annotation
     positions, pairing_queue = reader.read_file(threads = threads)
 
     ## Formating indexes pairs
@@ -80,13 +81,25 @@ def extract(cool_files, positions, outpath, log = None, **params):
         formated_pairs.to_csv(f"{outpath}/{data_title}_formated_pairs.csv")
 
     ## Random locus selection (for patch only) from positions
-    random_selection = None
     if params['detrending'] == "patch" and params["pileup"]:
-        selector = RandomSelector(**random_params)
-        random_selection = selector.select_randoms(positions, threads = threads)
 
-        if params["save_tmp"]:
-            random_selection.to_csv(f"{outpath}/{data_title}_random_patch.csv") # TODO: add method to re-use randoms for reproducibility
+        # if random files are provided
+        random_pos_path = f"{params['random_path']}_random_positions.csv"
+        random_pairs_path = f"{params['random_path']}_random_pairs.csv"
+        if os.path.exists(random_pos_path) and os.path.exists(random_pairs_path):
+            log.write(f'Using randoms found at {params['random_path']} for patch detrending.')
+
+            random_positions = pd.read_csv(random_pos_path, header=0, index_col=0)
+            random_pairs = pd.read_csv(random_pairs_path, header=0, index_col=0)
+
+        else:
+            log.write(f'Generating random positions for patch detrending.')
+            selector = RandomSelector(positions, **random_params)
+            random_positions, random_pairs = selector.select_randoms(formated_pairs, threads = threads)
+
+            if params["save_tmp"]:
+                random_positions.to_csv(f"{outpath}/{data_title}_random_positions.csv")
+                random_pairs.to_csv(f"{outpath}/{data_title}_random_pairs.csv")
     
     ## Matrix extraction
     matrix_extractor = MatrixExtractorLauncher(cool_files,
@@ -111,7 +124,7 @@ def extract(cool_files, positions, outpath, log = None, **params):
     if params["pileup"]:
         pileups_random = {}
         if params['detrending'] == "patch":
-            pileups_random_queue = matrix_extractor.launch_extraction(random_selection, formated_pairs, randoms = True, threads=threads)
+            pileups_random_queue = matrix_extractor.launch_extraction(random_positions, random_pairs, randoms = True, threads=threads)
             pileups_random = empty_queue_in_dict(pileups_random_queue, keys = ["sep_id", "binning", "cool_name"]) # exporting the patch detrending as an dict for access
 
         ## Pileup detrending and display
@@ -168,7 +181,8 @@ def tracks(cool_files, tracks, outpath, log = None, **params):
     random_params = {
         "center" : params["center"],
         "selection_window": params['rand_max_dist'],
-        "nb_rand_per_pos" : params['nb_pos']
+        "nb_rand_per_pos" : params['nb_pos'],
+        "random_jitter": params['random_jitter']
     }
 
     pileup_display_args = {
@@ -208,13 +222,25 @@ def tracks(cool_files, tracks, outpath, log = None, **params):
         formated_pairs.to_csv(f"{outpath}/{data_title}_formated_pairs.csv")
 
     ## Random locus selection (for patch only) from positions
-    random_selection = None
     if params['detrending'] == "patch" and params["pileup"]:
-        selector = RandomSelector(**random_params)
-        random_selection = selector.select_randoms(positions, threads = threads)
 
-        if params["save_tmp"]:
-            random_selection.to_csv(f"{outpath}/{data_title}_random_patch.csv")
+        # if random files are provided
+        random_pos_path = f"{params['random_path']}_random_positions.csv"
+        random_pairs_path = f"{params['random_path']}_random_pairs.csv"
+        if os.path.exists(random_pos_path) and os.path.exists(random_pairs_path):
+            log.write(f'Using randoms found at {params['random_path']} for patch detrending.')
+
+            random_positions = pd.read_csv(random_pos_path, header=0, index_col=0)
+            random_pairs = pd.read_csv(random_pairs_path, header=0, index_col=0)
+
+        else:
+            log.write(f'Generating random positions for patch detrending.')
+            selector = RandomSelector(positions, **random_params)
+            random_positions, random_pairs = selector.select_randoms(formated_pairs, threads = threads)
+
+            if params["save_tmp"]:
+                random_positions.to_csv(f"{outpath}/{data_title}_random_positions.csv")
+                random_pairs.to_csv(f"{outpath}/{data_title}_random_pairs.csv")
     
     ## Matrix extraction
     matrix_extractor = MatrixExtractorLauncher(cool_files,
@@ -240,7 +266,7 @@ def tracks(cool_files, tracks, outpath, log = None, **params):
     if params["pileup"]:
         pileups_random = {}
         if params['detrending'] == "patch":
-            pileups_random_queue = matrix_extractor.launch_extraction(random_selection, formated_pairs, randoms = True, threads=threads)
+            pileups_random_queue = matrix_extractor.launch_extraction(random_positions, random_pairs, randoms = True, threads=threads)
             pileups_random = empty_queue_in_dict(pileups_random_queue, keys = ["sep_id", "binning", "cool_name"]) # exporting the patch detrending as an dict for access
 
         ## Pileup detrending and display
