@@ -61,7 +61,7 @@ class Parser():
             "Start": int(fields[1]) + 1, # adapting the base for cooler (1-based)
             "End": int(fields[2]) + 1, # adapting the base for cooler (1-based)
             "Name": fields[3] if len(fields) > 6 else None,
-            "Strand": -1 if len(fields) > 10 and fields[5] == '-' else 1
+            "Strand": -1 if len(fields) > 10 and fields[5] == '-' else 0
         }
         hash1 = f"{record1['Chromosome']},{record1['Start']},{record1['End']},{record1['Strand']}".encode("ascii")
 
@@ -72,7 +72,7 @@ class Parser():
             "Start": int(fields[k + 2]) + 1, # adapting the base for cooler (1-based)
             "End": int(fields[k + 3]) + 1, # adapting the base for cooler (1-based)
             "Name": fields[k + 4] if len(fields) > 6 else None,
-            "Strand": -1 if len(fields) > 10 and fields[k + 6] == '-' else 1
+            "Strand": -1 if len(fields) > 10 and fields[k + 6] == '-' else 0
         }
         hash2 = f"{record2['Chromosome']},{record2['Start']},{record2['End']},{record2['Strand']}".encode("ascii")
         
@@ -109,7 +109,7 @@ class Parser():
             "Start": int(fields[1]) + 1,
             "End": int(fields[2]) + 1,
             "Name": fields[3] if len(fields) > 3 else None,
-            "Strand": -1 if len(fields) > 5 and fields[5] == '-' else 1
+            "Strand": -1 if len(fields) > 5 and fields[5] == '-' else 0
         }
         hash = f"{record['Chromosome']},{record['Start']},{record['End']},{record['Strand']}".encode("ascii")
 

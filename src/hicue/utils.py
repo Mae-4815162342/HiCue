@@ -292,13 +292,13 @@ def detrend_submatrix(submatrix, locus1, locus2, binning, ps, center="start"):
     submatrix_det = submatrix / ps[submatrix_index]
     return submatrix_det
 
-def yield_random_pairs(pair, nb_rand_per_pos, nb_pos):
-    """Yields the formated pair of each computed random pair index"""
-    for k in range(nb_rand_per_pos):
-        random_pair = pair.copy()
-        random_pair["Locus1"] = k * nb_pos + pair["Locus1"] 
-        random_pair["Locus2"] = k * nb_pos + pair["Locus2"]
-        yield random_pair
+# def yield_random_pairs(pair, nb_rand_per_pos, nb_pos):
+#     """Yields the formated pair of each computed random pair index"""
+#     for k in range(nb_rand_per_pos):
+#         random_pair = pair.copy()
+#         random_pair["Locus1"] = k * nb_pos + pair["Locus1"] 
+#         random_pair["Locus2"] = k * nb_pos + pair["Locus2"]
+#         yield random_pair
 
 ### Distance law adapted from Chromosight (Mathey-Doret et al., 2020)
 def distance_law(
@@ -429,6 +429,20 @@ def compute_nb_pos_gff(gff, percentage, gff_types = ["gene"]):
     for gff_type, count in gff_type_counts.items():
         nb_pos_tot += count if gff_type[0] in gff_types else 0
     return round(nb_pos_tot * percentage / 100)
+
+def compute_nb_selected_pos(positions, percentage, positions_type, gff_types = ["gene"]):
+    """Computes the number of position that will be kept from the positions file to get the right percentage."""
+    in_handle = open(positions)
+    if positions_type in ["gff", "gff3", "gtf"]:
+        examiner = GFF.GFFExaminer()
+        gff_type_counts = examiner.available_limits(in_handle)['gff_type']
+        nb_pos_tot = 0
+        for gff_type, count in gff_type_counts.items():
+            nb_pos_tot += count if gff_type[0] in gff_types else 0
+        return round(nb_pos_tot * percentage / 100)
+
+    else:
+        return round(len(set(in_handle.readlines())) * percentage / 100)
 
 def split_gff(gff_path, outpath = None):
     """Splits a gff file into an ensemble of gff files, one for each gff id, usually chromosomes.

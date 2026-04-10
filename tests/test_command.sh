@@ -10,8 +10,7 @@
 # hicue extract /data/Maelys/D_dadantii_analysis/directionnality/HEG_5perc /data/Maelys/D_dadantii_analysis/directionnality/HEG_5perc.gff /data/Maelys/D_dadantii_analysis/directionnality/dd_library.txt --circulars NC_014500.1 --save_tmp --windows 100000 --detrending patch --method median --flip --nb_pos 2 --display_strand
 # hicue extract /data/Maelys/D_dadantii_analysis/directionnality/HEG_5perc_loop /data/Maelys/D_dadantii_analysis/directionnality/HEG_5perc.gff /data/Maelys/D_dadantii_analysis/directionnality/dd_library.txt --circulars NC_014500.1 --windows 100000 --detrending patch --method median --loops --separate_by direction --save_tmp
 
-
-# hicue extract --method mean --min_dist 0 --windows 16000 \
+# hicue extract --method mean --min_dist 0 --windows 20000 \
 #     /home/sardine/Bureau/example_agglo_cohesin/new_version_hicue \
 #     /home/sardine/Bureau/example_agglo_cohesin/pairs_peaks_cohesins3.txt.bg2.10kb.50kb.2.bed2d \
 #     /home/sardine/Bureau/example_agglo_cohesin/valid_idx_pcrfree.pairs.2000.cool \
@@ -21,9 +20,13 @@
 #     --cmap_limits -0.2 0.2 \
 #     --nb_pos 10
 
+
 # chromosight quantify \
 #     /home/sardine/Bureau/example_agglo_cohesin/pairs_peaks_cohesins3.txt.bg2.10kb.50kb.2.bed2d \
 #     /home/sardine/Bureau/example_agglo_cohesin/valid_idx_pcrfree.pairs.2000.cool \
 #     /home/sardine/Bureau/example_agglo_cohesin/chromosight_test
 
-hicue tracks test_out/tracks_test test_data/tracks/WT.bw test_data/matrices/Control.mcool::resolutions/1000 --circulars NC_014500.1 --windows 50000 --detrending patch --flip -p high 99 --loops --save_tmp --no-loci --batch --display_strand
+# hicue tracks test_out/tracks_test test_data/tracks/WT.bw test_data/matrices/Control.mcool::resolutions/1000 --circulars NC_014500.1 --windows 50000 --detrending patch --nb_pos 1 --flip -t min 1500 --batch --loops --save_tmp --display_strand
+# hicue tracks test_out/tracks_test/positions test_data/tracks/WT.bw test_data/matrices/Control.mcool::resolutions/1000 --positions test_data/positions/plants_loops.bed2d --circulars NC_014500.1 --windows 50000 --detrending patch --flip -p high 100 --save_tmp --no-loci --batch --display_strand
+hicue tracks test_out/tracks_test/positions test_data/tracks/Endive4_2025.bw test_data/matrices/Endive4_2025.mcool::resolutions/5000 --positions test_data/positions/plants_loops.bed2d --circulars NC_014500.1 --windows 50000 --detrending patch --flip -p high 100 --save_tmp --no-loci --batch --display_strand --cmap_limits -0.5 0.5
+# hicue tracks test_out/tracks_test/positions test_data/tracks/Endive4_2025.bw test_data/matrices/Endive4_2025.mcool::resolutions/5000 --positions test_data/positions/plants_loops.bed --min_dist 100000 --loops --circulars NC_014500.1 --windows 50000 --detrending patch --flip -p high 100 --save_tmp --no-loci --batch --display_strand

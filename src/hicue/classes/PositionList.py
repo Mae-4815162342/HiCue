@@ -26,7 +26,7 @@ class PositionList():
 
     @staticmethod
     def add_value_in_sorted_down(val, val_list, position, position_dict):
-        """Adds a value in a ascending sorted list and returns the insertion index, or -1 if not inserted.
+        """Adds a value in a descending sorted list and returns the insertion index, or -1 if not inserted.
         Re-arranges the associated dictionnary."""
         if val >= val_list[0]:
             return -1

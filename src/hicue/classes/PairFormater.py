@@ -25,6 +25,8 @@ class PairFormater():
             if val == 'DONE':
                 break
             i, j = val
+            if i not in self._positions.index or j not in self._positions.index:
+                continue
             pos_i = self._positions.loc[i]
             pos_j = self._positions.loc[j]
             is_chrom_i_circular = pos_i["Chromosome"] in self._circulars

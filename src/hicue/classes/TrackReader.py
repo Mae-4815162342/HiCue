@@ -3,12 +3,13 @@ from hicue.classes.PositionList import PositionList
 
 class TrackReader():
     
-    def __init__(self, tracks, threshold = None, percentage = None, min_sep = 1000, annotation_files={}, overlap = "strict", save_to="", loop = False, record_type = None):
+    def __init__(self, tracks, threshold = None, percentage = None, min_sep = 1000, positions_file = None, position_type = "bed", overlap = "strict", save_to="", loop = False, record_type = None):
         self._tracks = tracks
         self._threshold = threshold
         self._percentage = percentage
         self._binning = min_sep
-        self._annotation_files = annotation_files
+        self._positions_file = positions_file
+        self._positions_type = position_type
         self._overlap = overlap
         self._save_to = save_to
         self._loop = loop
@@ -23,14 +24,14 @@ class TrackReader():
 
         tracks = pyBigWig.open(self._tracks)
 
-        # building from gff 
-        if "gff" in self._annotation_files:
-            positions = self.read_from_gff(tracks, save_to = save_to, threads = threads)
+        # building from positions 
+        if self._positions_file:
+            positions, pairs = self.read_from_positions(tracks, save_to = save_to, threads = threads)
         # building from tracks
         else:
             positions = self.read_from_tracks(tracks, save_to = save_to, threads = threads)
-
-        return positions
+            pairs = None
+        return positions, pairs
     
     def read_from_tracks(self, tracks, save_to = None, threads = 8):
         """Reads a track file by bins and applies threshold or percentage filters."""
@@ -90,13 +91,13 @@ class TrackReader():
 
         return positions
             
-    def read_from_gff(self, tracks, save_to = None, threads = 8):
-        """Annotates a GFF with its associated tracks and applies threshold or percentage filters."""
-        gff = self._annotation_files["gff"]
+    def read_from_positions(self, tracks, save_to = None, threads = 8):
+        """Annotates a position file with its associated tracks and applies threshold or percentage filters."""
 
         # defining queues
         lines_queue = Queue()
         position_queue = Queue()
+        pairing_queue = Queue()
         annotation_queue = Queue()
                 
         # launching parsers
@@ -105,11 +106,10 @@ class TrackReader():
             worker_location = "hicue.workers.Parser",
             threads = threads,
             input_queue = lines_queue,
-            output_queues = [annotation_queue],
-            file_type = "gff",
+            output_queues = [annotation_queue, pairing_queue],
+            file_type = self._positions_type,
             record_type = self._record_type,
-            is_loop = self._loop,
-            no_pairing = True
+            is_loop = self._loop
         )
         
         annotators = schedule_workers(
@@ -132,11 +132,11 @@ class TrackReader():
 
             # initialazing position_list
             high_low, percentage = self._percentage
-            nb_pos = compute_nb_pos_gff(gff, percentage, gff_types = [self._record_type])
+            nb_pos = compute_nb_selected_pos(self._positions_file, percentage, self._positions_type, gff_types = [self._record_type]) 
             position_list = PositionList(nb_pos, high_low, binning = self._binning)
 
             percentage_parsers = schedule_workers(
-                worker_class = "GFFPercentageParser",
+                worker_class = "PositionPercentageParser",
                 worker_location = "hicue.workers.TracksFilters",
                 threads = threads,
                 input_queue = position_queue,
@@ -148,7 +148,7 @@ class TrackReader():
         workers += schedule_workers(
                     worker_class = "FileStreamer",
                     worker_location = "hicue.workers.FileStreamer",
-                    file = gff,
+                    file = self._positions_file,
                     threads = 1,
                     t = threads,
                     output_queues = [lines_queue]
@@ -171,4 +171,4 @@ class TrackReader():
         if save_to:
             positions.to_csv(f"{save_to}/positions_indexed.csv", sep=",")
 
-        return positions
+        return positions, pairing_queue
