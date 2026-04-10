@@ -8,8 +8,9 @@ import hicue.hicue as h
 @click.argument('tracks', type=TRACK_FILE)
 @click.argument("cool_files", type=COOL)
 @click.option('-t', '--threshold', type=(click.Choice(['min', 'max']), float), help="Threshold applied to the tracks for selection in the tracks' unit. If 'min', the threshold is considered as the minimum value for tracks. If 'max' is selected, the threshold is the maximum value.")
-@click.option('-p', '--percentage', type=(click.Choice(['high', 'low']), click.IntRange(0, 100)), help="Threshold applied to the tracks for selection in percent. The first parameter indicates whether to take the percentage of high or low values. The second parameter is the percentage between 0 and 100.")# Will be applied after the threshold if --threshold is provided.")
-@click.option('--gff', type=GFF_FILE, help="Gff file provided for the position file automatic annotation if the file is a bed2d. The positions considered for pileup are all the genes contained in the bed2d files. For more options, use the hicue annotate command.")
+@click.option('-p', '--percentage', type=(click.Choice(['high', 'low']), click.IntRange(0, 100)), help="Percentage of the total numbers of sorted values to select, either with lowest values (low) or highest (high).")# Will be applied after the threshold if --threshold is provided.")
+@click.option('--positions', type=POSITION_FILE, help="Position file. If provided, the selection from tracks will only apply to the provided positions. For instance providing a GFF file will force the selection on the chosen record_type instead of using bins (by default genes).")
+@click.option('--gff_type', type=str, default="", help="Label of the tracks unit axis in display.")
 @click.option('--track_unit', type=str, default="", help="Label of the tracks unit axis in display.")
 @click.option('-b', '--binnings', type=INT_LIST, default="1000", help="Bin size in bp. Used only if the provided cool files are in mcool format. Several bin sizes can be provided as a comma-separated list. Default value: 1000.")
 @click.option('-w', '--windows', type=INT_LIST, default="30000", help="Window size for sub-matrices extraction in bp. Several window sizes can be provided as a comma-separated list. Default value: 30000.")
@@ -17,9 +18,11 @@ import hicue.hicue as h
 @click.option('-m', '--method', type=click.Choice(['median', 'mean', 'sum'], case_sensitive=False), default='median', help="Aggregation method. If the selected detrending is patch, the method will also be used to aggregate the random sub-matrices. Default value: median.")
 @click.option('-f', '--flip', is_flag=True, default=False, help="Enables sub-matrices flipping depending on their sense of transcription in the pileups. Requires the strand annotation of provided positions. If not provided, will consider all position in forward.")
 @click.option('-r', '--raw', is_flag=True, default=False, help="Use the raw matrices in the cool files (sets balance to False). Default value: False")
-@click.option('-e', '--threads', type=int, default=8, help="Number of threads used by each multithreaded worker type. Default: 8.")
+@click.option('--threads', type=int, default=8, help="Number of threads used by each multithreaded worker type. Default: 8.")
 @click.option('--nb_pos', type=int, default=2, help="Number of random positions selected for patch detrending. Default value: 2.")
 @click.option('--rand_max_dist', type=int, default="100000", help="Maximum distance in bp between provided positions and the random positions selected for patch detrending. Default value: 100000.")
+@click.option('--random_jitter', type=int, default=0, help="Allowed variation of the distance between two random loci in bp compared to the original distance value between pairs of positions. The distance will be selected in the [distance - random_jitter: distance + random_jitter] intervale.")
+@click.option('--random_path', type=str, default=None, help="Path to previously generated random positions file. If provided, the random positions and pairs for the patch detrending are extracted from the files and not re-calculated. random_path must be formated as such: [folder_path]/[prefix]. HiCue will expect two files: {random_path}_random_positions.csv and {random_path}_random_pairs.csv.")
 @click.option('--format', type=STR_LIST, default="pdf", help="Figures saving formats. Default value: pdf")
 @click.option('--circulars', type=STR_LIST, default="none", help="Coma-separated list of the chromosomes to treat as circular. By default, chromosomes are not considered circular.")
 @click.option('--loops', is_flag=True, help="Centers the sub-matrices on pairs of positions instead of single position.")
@@ -48,6 +51,7 @@ def tracks(ctx, outpath, tracks, cool_files, **params):
         # oppening log
         if not os.path.exists(outpath):
                create_folder_path(outpath)
+
         log = open(f"{outpath}/{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_log.txt", 'w')
         log.write(f"Tracks mode.\nExecuting command: hicue {' '.join(sys.argv[1:])}\n")
         log.write(f"""Extracting from {cool_files}

@@ -73,10 +73,10 @@ class TracksThresholdParser(threading.Thread):
                     }
                     self._output_queue.put((index,position))
 
-class GFFPercentageParser(threading.Thread):
+class PositionPercentageParser(threading.Thread):
     
     def __init__(self, position_list, tracks, input_queue, **kwargs):
-        super(GFFPercentageParser, self).__init__(**kwargs)
+        super(PositionPercentageParser, self).__init__(**kwargs)
         
         self._position_list = position_list
         self._tracks = tracks

@@ -58,10 +58,6 @@ class MatrixExtractor():
     def stream_pairs(input_queue, formated_pairs, max_index, randoms = False, nb_rand_per_pos = 1, threads = 8):
         """Puts each formated pair of sep_id (or random pair keeping the original pair format) in the input queue."""
         for index, pair in formated_pairs.iterrows():
-            if randoms:
-                for random_pair in yield_random_pairs(pair, nb_rand_per_pos, max_index):
-                    input_queue.put((index, random_pair))
-            else:
                 input_queue.put((index, pair))
         for _ in range(threads):
             input_queue.put("DONE")

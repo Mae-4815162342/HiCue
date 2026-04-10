@@ -1,41 +1,47 @@
 from hicue.utils import *
 
 class RandomSelector():
-    def __init__(self, center = "start", selection_window = 100000, nb_rand_per_pos = 1):
+    def __init__(self, positions, center = "start", selection_window = 100000, nb_rand_per_pos = 1, random_jitter = 0):
+        self._positions = positions
         self._center = center
         self._nb_rand_per_pos = nb_rand_per_pos
         self._selection_window = selection_window
+        self._jitter = random_jitter
         
     @staticmethod
-    def stream_positions(positions, queue):
-        for i, pos in positions.iterrows():
-            queue.put((i, pos))
+    def stream_pairs(pairs, queue):
+        for i, pair in pairs.iterrows():
+            queue.put((i, pair))
     
-    def select_randoms(self, positions, threads = 8):
+    def select_randoms(self, pairs, threads = 8):
         
-        positions_queue = Queue()
+        pairs_queue = Queue()
         random_positions_queue = Queue()
+        random_pairs_queue = Queue()
 
         #  initialisation of selectors
         workers = schedule_workers(
                     worker_class = "RandomSelectorScheduler",
                     worker_location = "hicue.workers.RandomSelector",
                     threads = threads,
-                    input_queue = positions_queue,
-                    output_queues = [random_positions_queue],
-                    nb_pos = np.max(positions.index) + 1,
+                    input_queue = pairs_queue,
+                    output_queues = [random_positions_queue, random_pairs_queue],
+                    nb_pairs = np.max(pairs.index) + 1,
+                    positions = self._positions,
                     center = self._center,
                     nb_rand_per_pos = self._nb_rand_per_pos,
                     selection_window = self._selection_window,
+                    jitter = self._jitter
                 )        
 
-        self.stream_positions(positions, positions_queue)
+        self.stream_pairs(pairs, pairs_queue)
 
         # joining
-        join_queues([positions_queue], threads = threads)
+        join_queues([pairs_queue], threads = threads)
         join_workers(workers)
         join_queues([random_positions_queue], threads = threads)
         
         random_positions = position_queue_to_df(random_positions_queue)
+        random_pairs = position_queue_to_df(random_pairs_queue)
         
-        return random_positions
+        return random_positions, random_pairs
