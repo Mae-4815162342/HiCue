@@ -28,5 +28,8 @@
 
 # hicue tracks test_out/tracks_test test_data/tracks/WT.bw test_data/matrices/Control.mcool::resolutions/1000 --circulars NC_014500.1 --windows 50000 --detrending patch --nb_pos 1 --flip -t min 1500 --batch --loops --save_tmp --display_strand
 # hicue tracks test_out/tracks_test/positions test_data/tracks/WT.bw test_data/matrices/Control.mcool::resolutions/1000 --positions test_data/positions/plants_loops.bed2d --circulars NC_014500.1 --windows 50000 --detrending patch --flip -p high 100 --save_tmp --no-loci --batch --display_strand
-hicue tracks test_out/tracks_test/positions test_data/tracks/Endive4_2025.bw test_data/matrices/Endive4_2025.mcool::resolutions/5000 --positions test_data/positions/plants_loops.bed2d --circulars NC_014500.1 --windows 50000 --detrending patch --flip -p high 100 --save_tmp --no-loci --batch --display_strand --cmap_limits -0.5 0.5
+# hicue tracks test_out/tracks_test/positions test_data/tracks/Endive4_2025.bw test_data/matrices/Endive4_2025.mcool::resolutions/5000 --positions test_data/positions/plants_loops.bed2d --circulars NC_014500.1 --windows 50000 --detrending patch --flip -p high 100 --save_tmp --no-loci --batch --display_strand --cmap_limits -0.5 0.5
 # hicue tracks test_out/tracks_test/positions test_data/tracks/Endive4_2025.bw test_data/matrices/Endive4_2025.mcool::resolutions/5000 --positions test_data/positions/plants_loops.bed --min_dist 100000 --loops --circulars NC_014500.1 --windows 50000 --detrending patch --flip -p high 100 --save_tmp --no-loci --batch --display_strand
+
+# hicue regions test_out/regions_test test_data/regions/3D7_aHP1.sort.bed test_data/regions/MicroC-Bartfai-Control.mcool::resolutions/10000
+hicue regions test_out/regions_test test_data/regions/3D7_only_chrom7.bed test_data/regions/MicroC-Bartfai-Control.mcool::resolutions/10000 --loops --separate_by chroms --windows 100000 --padding 1.0 --no-batch --no-loci --save_tmp --detrending none

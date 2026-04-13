@@ -17,13 +17,14 @@ def initialize_globals():
 
 class SubmatrixFormaterScheduler(threading.Thread):
     
-    def __init__(self, input_queue, output_queues, display_queue, outpath, **subfargs):
+    def __init__(self, input_queue, output_queues, display_queue, outpath, is_region = False, **subfargs):
         super(SubmatrixFormaterScheduler, self).__init__()
 
         self._input_queue = input_queue
         self._output_queues = output_queues
         self._display_queue = display_queue
         self._outpath = outpath
+        self._is_region = is_region
         self._subfargs = subfargs
 
         self.start()
@@ -39,20 +40,22 @@ class SubmatrixFormaterScheduler(threading.Thread):
             if val == 'DONE':
                 break
 
-            index, window, pair, submatrix = val
+            index, size_metric, pair, submatrix = val
             formated_submatrix = formater.format(submatrix, pair)
 
             for queue in self._output_queues:
-                queue.put((index, window, pair["Sep_id"], formated_submatrix))
+                queue.put((index, size_metric, pair["Sep_id"], formated_submatrix))
 
             if self._display_queue is not None:
-                self._display_queue.put({
+                to_queue = {
                     "matrix": formated_submatrix,
                     "pair": pair,
-                    "window": window,
                     "binning": formater._binning,
-                    "outfolder": f"{self._outpath}/{formater._cool_name}/{pair['Sep_id']}/binning_{formater._binning}"
-                })
+                    "outfolder": f"{self._outpath}/{formater._cool_name}/{pair['Sep_id']}/binning_{formater._binning}",
+                    "size_metric": size_metric,
+                    "is_region": self._is_region
+                }
+                self._display_queue.put(to_queue)
 
 class SubmatrixFormater():
     """Class for submatrix formating (detrending, flipping, masking, ...)"""

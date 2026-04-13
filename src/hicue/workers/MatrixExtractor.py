@@ -35,7 +35,7 @@ class MatrixExtractorScheduler(threading.Thread):
 
 class MatrixExtractor():
     """Extract the positions submatrices and creates pileups."""
-    def __init__(self, formated_pairs, positions, windows, tracks = None, nb_pos = -1, center = "start", raw = False, method = "median", flip = False, randoms = False, nb_rand_per_pos = 1, display_loci = False, display_batch = False, compute_pileups = True, outpath = "", display_args = {}, log = None):
+    def __init__(self, formated_pairs, positions, windows, tracks = None, nb_pos = -1, center = "start", raw = False, method = "median", flip = False, randoms = False, nb_rand_per_pos = 1, display_loci = False, display_batch = False, compute_pileups = True, outpath = "", display_args = {}, resizing = [], extract_regions = False, padding = None, log = None):
         self._formated_pairs = formated_pairs
         self._positions = positions
         self._compute_pileups = compute_pileups
@@ -52,6 +52,9 @@ class MatrixExtractor():
         self._display_batch = display_batch
         self._outpath = outpath
         self._display_args = display_args
+        self._extract_regions = extract_regions
+        self._resizing = resizing
+        self._padding = padding
         self._log = log
 
     @staticmethod
@@ -91,6 +94,18 @@ class MatrixExtractor():
                 center = self._center, 
                 raw = self._raw,
                 random = self._randoms
+            ) if not self._extract_regions else schedule_workers(
+                worker_class = "RegionExtracterScheduler",
+                worker_location = "hicue.workers.RegionExtracter",
+                threads = 1, # to avoid overhead in reading the cool file, only one extracter is alocated
+                input_queue = input_queue,
+                output_queues = [raw_submatrices_queue],
+                cool_file = cool_file,
+                positions = self._positions, 
+                tracks = self._tracks,
+                expected_sizes = self._resizing,
+                raw = self._raw,
+                random = self._randoms
             )
         
         # initialisation of the matrix formaters
@@ -109,6 +124,7 @@ class MatrixExtractor():
                 center = self._center,
                 method = self._method,
                 raw = self._raw,
+                is_region = self._extract_regions,
                 log = self._log
             )
         
@@ -127,9 +143,10 @@ class MatrixExtractor():
                         output_queues = displayer_output,
                         function = display_batch_submatrices,
                         batch_size = 64,
-                        params_to_batch = ["track_unit"],
+                        params_to_batch = ["track_unit", "is_region", "display_log"],
                         positions = self._positions,
                         chromsizes = cool_file.chromsizes,
+                        padding = self._padding,
                         **self._display_args
                     )
 
@@ -144,6 +161,7 @@ class MatrixExtractor():
                     function = display_submatrix,
                     positions = self._positions,
                     chromsizes = cool_file.chromsizes,
+                    padding = self._padding,
                     **self._display_args
                 )
 

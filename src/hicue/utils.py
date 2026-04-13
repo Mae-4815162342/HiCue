@@ -482,3 +482,174 @@ def split_gff(gff_path, outpath = None):
     for file in chrom_files.values():
         file.close()
     return chrom_files_path
+
+
+### region mode methods
+
+# extracting individual windows from the list of regions
+def extract_window_region(cool, region1, region2, is_loc_circ1 = False, is_loc_circ2 = False, raw = False):
+    """Extracts a submatrix of regions interaction zone from cool matrix.
+    If required, adds paddings. Takes into account chromosome circularity."""
+    matrix = cool.matrix(balance=(not raw))
+    binning = cool.binsize
+
+    if region1["Chromosome"] not in cool.chromsizes or region2["Chromosome"] not in cool.chromsizes:
+        return None
+    chrom_size1 = cool.chromsizes[region1["Chromosome"]]
+    chrom_size2 = cool.chromsizes[region2["Chromosome"]]
+    
+    start1 = adjust_locus(region1["Padded_start"], chrom_size1, is_circ_chrom = is_loc_circ1)
+    end1 = adjust_locus(region1["Padded_end"], chrom_size1, is_circ_chrom = is_loc_circ1)
+    start2 = adjust_locus(region2["Padded_start"], chrom_size2, is_circ_chrom = is_loc_circ2)
+    end2 = adjust_locus(region2["Padded_end"], chrom_size2, is_circ_chrom = is_loc_circ2)
+    
+    # 1. checking overflows
+    region1_overflow = start1 >= end1
+    region2_overflow = start2 >= end2
+
+    # 2. computing intervales: assures the original submatrix includes the region center
+    lower_overflow1 = chrom_size1 - start1 < end1
+    lower_overflow2 = chrom_size2 - start2 < end2
+    
+    lower_interval1 = f"{region1['Chromosome']}:{start1 if not region1_overflow else 0}-{end1}" 
+    higher_interval1 = f"{region1['Chromosome']}:{start1}-{end1 if not region1_overflow else chrom_size1}" 
+    pos1 = lower_interval1 if lower_overflow1 else higher_interval1
+    
+    lower_interval2 = f"{region2['Chromosome']}:{start2 if not region2_overflow else 0}-{end2}" 
+    higher_interval2 = f"{region2['Chromosome']}:{start2}-{end2 if not region2_overflow else chrom_size2}" 
+    pos2 = lower_interval2 if lower_overflow2 else higher_interval2
+
+    # 3. fetching main submatrix
+    submatrix = matrix.fetch(pos1, pos2)[:]
+    
+    if (not region1_overflow and not region2_overflow): # no overflow
+        return submatrix
+    
+    # 4. managing overflows:
+    bins1_to_fill = (chrom_size1 // binning - start1 // binning) + 1 if lower_overflow1 else end1 // binning + 1
+    bins2_to_fill = (chrom_size2 // binning - start2 // binning) + 1 if lower_overflow2 else end2 // binning + 1
+
+    if bins1_to_fill == 0 and bins2_to_fill == 0:
+        return submatrix
+        
+    if bins1_to_fill > 0:
+        fill1 = np.array([chrom_size1 - (bins1_to_fill * binning), chrom_size1]) if lower_overflow1 else np.array([0, end1])
+        fill1_pos = f"{region1['Chromosome']}:{fill1[0]}-{fill1[1]}"
+    
+    if bins2_to_fill > 0:
+        fill2 = np.array([chrom_size2 - (bins2_to_fill * binning), chrom_size2]) if lower_overflow2 else np.array([0, end2])
+        fill2_pos = f"{region2['Chromosome']}:{fill2[0]}-{fill2[1]}"
+        
+    mat1, mat2 = None, None
+    if bins2_to_fill > 0:
+        mat1 = matrix.fetch(pos1, fill2_pos) if is_loc_circ2 else np.full((submatrix.shape[0], bins2_to_fill), np.nan)
+            
+    if bins1_to_fill > 0:
+        mat2 = matrix.fetch(fill1_pos, pos2) if is_loc_circ1 else np.full((bins1_to_fill, submatrix.shape[1]), np.nan)
+        
+    # two dimensions to fill
+    if region1_overflow and region2_overflow:
+
+        mat3 = matrix.fetch(fill1_pos, fill2_pos) if is_loc_circ1 and is_loc_circ2 else np.full((bins1_to_fill, bins2_to_fill), np.nan)
+
+        concat1 = np.concatenate([mat1, submatrix], axis = 1) if lower_overflow2 else np.concatenate([submatrix, mat1], axis = 1)
+        concat2 = np.concatenate([mat3, mat2], axis = 1) if lower_overflow2 else np.concatenate([mat2, mat3], axis = 1)
+        submatrix = np.concatenate([concat2, concat1], axis = 0) if lower_overflow1 else np.concatenate([concat1, concat2], axis = 0)
+        
+    # dim1 to fill
+    elif region1_overflow:        
+        submatrix = np.concatenate([mat2, submatrix], axis = 0) if lower_overflow1 else np.concatenate([submatrix, mat2], axis = 0)
+        
+    # dim2 to fill
+    elif region2_overflow:
+        submatrix = np.concatenate([mat1, submatrix], axis = 1) if lower_overflow2 else np.concatenate([submatrix, mat1], axis = 1)
+ 
+    return submatrix
+
+def zoom_array(
+    in_array,
+    final_shape,
+    same_sum=False,
+    zoom_function=partial(zoom, order=1),
+    **zoom_kwargs
+):
+    """Rescale an array or image.
+
+    Normally, one can use scipy.ndimage.zoom to do array/image rescaling.
+    However, scipy.ndimage.zoom does not coarsegrain images well. It basically
+    takes nearest neighbor, rather than averaging all the pixels, when
+    coarsegraining arrays. This increases noise. Photoshop doesn't do that, and
+    performs some smart interpolation-averaging instead.
+
+    If you were to coarsegrain an array by an integer factor, e.g. 100x100 ->
+    25x25, you just need to do block-averaging, that's easy, and it reduces
+    noise. But what if you want to coarsegrain 100x100 -> 30x30?
+
+    Then my friend you are in trouble. But this function will help you. This
+    function will blow up your 100x100 array to a 120x120 array using
+    scipy.ndimage zoom Then it will coarsegrain a 120x120 array by
+    block-averaging in 4x4 chunks.
+
+    It will do it independently for each dimension, so if you want a 100x100
+    array to become a 60x120 array, it will blow up the first and the second
+    dimension to 120, and then block-average only the first dimension.
+
+    (Copied from mirnylib.numutils)
+
+    Parameters
+    ----------
+    in_array : ndarray
+        n-dimensional numpy array (1D also works)
+    final_shape : shape tuple
+        resulting shape of an array
+    same_sum : bool, optional
+        Preserve a sum of the array, rather than values. By default, values
+        are preserved
+    zoom_function : callable
+        By default, scipy.ndimage.zoom with order=1. You can plug your own.
+    **zoom_kwargs :
+        Options to pass to zoomFunction.
+
+    Returns
+    -------
+    rescaled : ndarray
+        Rescaled version of in_array
+
+    """
+    in_array = np.asarray(in_array, dtype=np.double)
+    in_shape = in_array.shape
+    assert len(in_shape) == len(final_shape)
+    mults = []  # multipliers for the final coarsegraining
+    for i in range(len(in_shape)):
+        if final_shape[i] < in_shape[i]:
+            mults.append(int(np.ceil(in_shape[i] / final_shape[i])))
+        else:
+            mults.append(1)
+    # shape to which to blow up
+    temp_shape = tuple([i * j for i, j in zip(final_shape, mults)])
+
+    # stupid zoom doesn't accept the final shape. Carefully crafting the
+    # multipliers to make sure that it will work.
+    zoom_multipliers = np.array(temp_shape) / np.array(in_shape) + 0.0000001
+    assert zoom_multipliers.min() >= 1
+
+    # applying scipy.ndimage.zoom
+    rescaled = zoom_function(in_array, zoom_multipliers, **zoom_kwargs)
+
+    for ind, mult in enumerate(mults):
+        if mult != 1:
+            sh = list(rescaled.shape)
+            assert sh[ind] % mult == 0
+            newshape = sh[:ind] + [sh[ind] // mult, mult] + sh[ind + 1 :]
+            rescaled.shape = newshape
+            rescaled = np.mean(rescaled, axis=ind + 1)
+    assert rescaled.shape == final_shape
+
+    if same_sum:
+        extra_size = np.prod(final_shape) / np.prod(in_shape)
+        rescaled /= extra_size
+    return rescaled
+
+def resize_window(submatrix, expected_size = 100):
+    """Resizes a submatrix to match the shape expected_size x expected_size."""
+    return zoom_array(submatrix, (expected_size, expected_size))
