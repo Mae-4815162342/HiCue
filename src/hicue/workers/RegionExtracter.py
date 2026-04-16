@@ -25,9 +25,9 @@ class RegionExtracterScheduler(threading.Thread):
                 break
 
             index, pair = val
-            for expected_size, submatrix in extracter.extract_pair(pair):
+            for expected_size, submatrix,tracks in extracter.extract_pair(pair):
                 for queue in self._output_queues:
-                    queue.put((index, expected_size, pair, submatrix))
+                    queue.put((index, expected_size, pair, submatrix, tracks))
 
 class RegionExtracter():
     """Class for submatrix extraction from a pair of positions."""
@@ -49,26 +49,27 @@ class RegionExtracter():
                                             is_loc_circ1 = bool(pair['Chrom1_circular']),
                                             is_loc_circ2 = bool(pair['Chrom2_circular']),
                                             raw = self._raw)
-            submatrix = resize_window(submatrix, expected_size = expected_size)
             
             if submatrix is None:
                 print(f"Pair {pair['Locus1']}:{pair['Locus2']} could not be included in pileup due to the following: chromosome ({self._positions.loc[pair['Locus1']]['Chromosome']}) absent from cool.") # TODO write in log
                 continue
-            # if self._tracks: # TODO: to re-write
-            #     subtracks1 = extract_tracks(self._tracks, 
-            #                         self._positions.loc[pair['Locus1']],
-            #                         self._binning,
-            #                         resizing, 
-            #                         is_loc_circ = bool(pair['Chrom1_circular']),
-            #                         center = self._center)
-            #     submatrix = np.concatenate([submatrix, [subtracks1]], axis = 0)
-            #     if pair['Locus1'] != pair['Locus2']:
-            #         subtracks2 = extract_tracks(self._tracks, 
-            #                             self._positions.loc[pair['Locus2']],
-            #                             self._binning,
-            #                             resizing, 
-            #                             is_loc_circ = bool(pair['Chrom2_circular']),
-            #                             center = self._center)
-            #         submatrix = np.concatenate([submatrix, [subtracks2]], axis = 0)
-            yield expected_size, submatrix
+
+            subtracks1, subtracks2 = None, None
+            if self._tracks: # TODO: addapt to region
+                subtracks1 = extract_tracks(self._tracks, 
+                                    self._positions.loc[pair['Locus1']],
+                                    self._binning,
+                                    expected_size, 
+                                    is_loc_circ = bool(pair['Chrom1_circular']),
+                                    center = self._center)
+                # submatrix = np.concatenate([submatrix, [subtracks1]], axis = 0)
+                if pair['Locus1'] != pair['Locus2']:
+                    subtracks2 = extract_tracks(self._tracks, 
+                                        self._positions.loc[pair['Locus2']],
+                                        self._binning,
+                                        expected_size, 
+                                        is_loc_circ = bool(pair['Chrom2_circular']),
+                                        center = self._center)
+                    # submatrix = np.concatenate([submatrix, [subtracks2]], axis = 0)
+            yield expected_size, submatrix, [subtracks1, subtracks2]
     

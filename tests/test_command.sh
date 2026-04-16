@@ -32,4 +32,4 @@
 # hicue tracks test_out/tracks_test/positions test_data/tracks/Endive4_2025.bw test_data/matrices/Endive4_2025.mcool::resolutions/5000 --positions test_data/positions/plants_loops.bed --min_dist 100000 --loops --circulars NC_014500.1 --windows 50000 --detrending patch --flip -p high 100 --save_tmp --no-loci --batch --display_strand
 
 # hicue regions test_out/regions_test test_data/regions/3D7_aHP1.sort.bed test_data/regions/MicroC-Bartfai-Control.mcool::resolutions/10000
-hicue regions test_out/regions_test test_data/regions/3D7_only_chrom7.bed test_data/regions/MicroC-Bartfai-Control.mcool::resolutions/10000 --loops --separate_by chroms --windows 100000 --padding 1.0 --no-batch --no-loci --save_tmp --detrending none
+hicue regions test_out/regions_test_ps test_data/regions/3D7_only_chrom7.bed test_data/regions/MicroC-Bartfai-Control.mcool::resolutions/5000 --loops --separate_by chroms --windows 100000 --padding 1.0 --batch --loci --format png --save_tmp --detrending ps -e 20,51

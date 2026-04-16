@@ -25,9 +25,9 @@ class ExtracterScheduler(threading.Thread):
                 break
 
             index, pair = val
-            for window, submatrix in extracter.extract_pair(pair):
+            for window, submatrix, tracks in extracter.extract_pair(pair):
                 for queue in self._output_queues:
-                    queue.put((index, window, pair, submatrix))
+                    queue.put((index, window, pair, submatrix, tracks))
 
 class Extracter():
     """Class for submatrix extraction from a pair of positions."""
@@ -56,6 +56,8 @@ class Extracter():
             if submatrix is None:
                 print(f"Pair {pair['Locus1']}:{pair['Locus2']} could not be included in pileup for window {window} due to the following: chromosome ({self._positions.loc[pair['Locus1']]['Chromosome']}) absent from cool.") # TODO write in log
                 continue
+
+            subtracks1, subtracks2 = None, None
             if self._tracks:
                 subtracks1 = extract_tracks(self._tracks, 
                                     self._positions.loc[pair['Locus1']],
@@ -63,7 +65,7 @@ class Extracter():
                                     window, 
                                     is_loc_circ = bool(pair['Chrom1_circular']),
                                     center = self._center)
-                submatrix = np.concatenate([submatrix, [subtracks1]], axis = 0)
+                # submatrix = np.concatenate([submatrix, [subtracks1]], axis = 0)
                 if pair['Locus1'] != pair['Locus2']:
                     subtracks2 = extract_tracks(self._tracks, 
                                         self._positions.loc[pair['Locus2']],
@@ -71,6 +73,6 @@ class Extracter():
                                         window, 
                                         is_loc_circ = bool(pair['Chrom2_circular']),
                                         center = self._center)
-                    submatrix = np.concatenate([submatrix, [subtracks2]], axis = 0)
-            yield window, submatrix
+                    # submatrix = np.concatenate([submatrix, [subtracks2]], axis = 0)
+            yield window, submatrix, [subtracks1, subtracks2]
     

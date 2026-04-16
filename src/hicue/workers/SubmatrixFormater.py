@@ -4,12 +4,16 @@ global chrom_ps
 global trans_av
 
 ps_lock = threading.Lock()
+diag_mask_lock = threading.Lock()
 trans_lock = threading.Lock()
 
 def initialize_globals():
     with ps_lock:
         global chrom_ps
         chrom_ps = {}
+    with diag_mask_lock:
+        global chrom_diag_mask
+        chrom_diag_mask = {}
     with trans_lock:
         global trans_av
         trans_av = {}
@@ -40,8 +44,8 @@ class SubmatrixFormaterScheduler(threading.Thread):
             if val == 'DONE':
                 break
 
-            index, size_metric, pair, submatrix = val
-            formated_submatrix = formater.format(submatrix, pair)
+            index, size_metric, pair, submatrix, tracks = val
+            formated_submatrix = formater.format(submatrix, tracks, pair, is_region = self._is_region, expected_size = size_metric)
 
             for queue in self._output_queues:
                 queue.put((index, size_metric, pair["Sep_id"], formated_submatrix))
@@ -70,7 +74,7 @@ class SubmatrixFormater():
         self._raw = raw
         self._log = log
 
-    def get_ps(self, chromosome, raw = False):
+    def get_ps(self, chromosome, is_circular = False, raw = False):
         """Computes or retrieve ps for the chromosomes"""
         ps = None
         with ps_lock:
@@ -84,13 +88,27 @@ class SubmatrixFormater():
                 except:
                     chrom_matrix = csr_matrix(self._cool_file.matrix(balance = (not raw), sparse = True).fetch(chromosome))
                 finally:
+                    chrom_matrix = np.concatenate([np.concatenate([chrom_matrix, chrom_matrix], axis = 0), np.concatenate([chrom_matrix, chrom_matrix], axis = 0)], axis = 1) if is_circular else chrom_matrix
                     ps = distance_law(chrom_matrix, method = self._method)
+                    ps = np.concatenate([ps, np.empty(len(ps))]) if not is_circular else ps
                 if self._log is not None:
                     self._log.write(f"Distance law for chromosome {chromosome} computed in {time.time() - start_time} seconds\n")
                 chrom_ps[chromosome] = ps
         return ps
+    
+    def get_diag_mask(self, diag_mask_size, chromosome, is_circular = False):
+        """Computes or retrieve the diagonal mask for a given chromosome and binning size"""
+        diag_mask = None
+        with diag_mask_lock:
+            global chrom_diag_mask
+            if self._binning not in chrom_diag_mask:
+                chrom_diag_mask[self._binning] = {}
+            if chromosome not in chrom_diag_mask[self._binning]:
+                chrom_diag_mask[self._binning][chromosome] = compute_chromosome_diag_mask(self._cool_file.chromsizes[chromosome], diag_mask_size, self._binning, is_circular = is_circular)
+            diag_mask = chrom_diag_mask[self._binning][chromosome]
+        return diag_mask
 
-    def get_trans_av(self, chromosome1, chromosome2, method = "median", raw = False):
+    def get_trans_av(self, chromosome1, chromosome2):
         """Computes or retrieve trans detrending value for the chromosomes"""
         trans_det = np.nan
         with trans_lock:
@@ -100,23 +118,25 @@ class SubmatrixFormater():
             elif (chromosome2, chromosome1) in trans_av:
                 trans_det = trans_av[(chromosome2, chromosome1)]
             else:
-                match method:
+                match self._method:
                     case "mean":
-                        trans_det = self._cool_file.matrix(balance = (not raw), sparse = True).fetch(chromosome1, chromosome2).mean()
+                        trans_det = self._cool_file.matrix(balance = (not self._raw), sparse = True).fetch(chromosome1, chromosome2).mean()
                     case "median":
-                        trans_det = get_sparse_median(self._cool_file.matrix(balance = (not raw), sparse = True).fetch(chromosome1, chromosome2).data, 0)
+                        trans_det = get_sparse_median(self._cool_file.matrix(balance = (not self._raw), sparse = True).fetch(chromosome1, chromosome2).data, 0)
+                if self._log is not None:
+                    self._log.write(f"Detrending trans contact between {chromosome1} and {chromosome2} with {self._method} value of contact map: {trans_det}.\n")
                 trans_av[(chromosome1, chromosome2)] = trans_det
                 trans_av[(chromosome2, chromosome1)] = trans_det
         return trans_det
 
-    def detrend(self, submatrix, locus1, locus2, is_trans = False):
+    def detrend(self, submatrix, locus1, locus2, is_trans = False, is_circular = False):
         """Detrends cis-contact by the p(s), the median of the inter-chromosomal space otherwise."""
         detrended_submatrix = None
         if is_trans:
-            detrending = self.get_trans_av(locus1["Chromosome"], locus2["Chromosome"], method = self._method, raw = self._raw)
+            detrending = self.get_trans_av(locus1["Chromosome"], locus2["Chromosome"])
             detrended_submatrix = submatrix / detrending
         else:
-            ps = self.get_ps(locus1["Chromosome"], locus2["Chromosome"])
+            ps = self.get_ps(locus1["Chromosome"], is_circular = is_circular)
             detrended_submatrix = detrend_submatrix(submatrix, locus1, locus2, self._binning, ps, center = self._center)
         return detrended_submatrix
     
@@ -145,29 +165,62 @@ class SubmatrixFormater():
                     result_tracks[1] = np.flip(result_tracks[1])
         return result_matrix, result_tracks
 
-    def format(self, matrix, pair):
+    def format(self, matrix, tracks, pair, is_region = False, expected_size = 0):
         """Applies all formating operations to a submatrix."""
-        result_matrix = matrix[:len(matrix[0])]
-        tracks = matrix[len(matrix[0]):] if len(matrix) > len(matrix[0]) else None
+        result_matrix = matrix
+        subtrack1, subtrack2 = tracks[0], tracks[1]
 
         locus1 = self._positions.loc[pair['Locus1']]
         locus2 = self._positions.loc[pair['Locus2']]
-        
-        # masking
-        result_matrix = mask_diagonal(result_matrix, 
-                                      locus1, 
-                                      locus2, 
-                                      self._binning, 
-                                      int(pair["Diag_mask"]), 
-                                      center = self._center)
-        # detrending
-        if bool(pair["Ps"]):
-            result_matrix = self.detrend(result_matrix, locus1, locus2, is_trans = pair["Trans"])
+
+        diagonal_masking = int(pair["Diag_mask"])
+        is_trans_contact = bool(pair["Trans"])
+        mask = diagonal_masking > 0 and not is_trans_contact
+        ps_detrending = bool(pair["Ps"])
+
+
+        if is_region:
+            if mask or ps_detrending:
+                # computing the distance to diagonal matrix
+                dist_matrix = get_dist_to_diag_matrix(self._cool_file, locus1, locus2)
+
+                # masking diagonal
+                if mask:
+                    diag_mask = self.get_diag_mask(diagonal_masking, locus1["Chromosome"], is_circular = bool(pair["Chrom1_circular"]))
+                    result_matrix = diag_mask[dist_matrix] * result_matrix
+
+                # applying P(s)
+                if ps_detrending:
+                    if not is_trans_contact:
+                        ps = self.get_ps(locus1["Chromosome"], is_circular = bool(pair["Chrom1_circular"]))
+                        result_matrix = result_matrix / ps[dist_matrix]
+                    else:
+                        result_matrix = result_matrix / self.get_trans_av(locus1["Chromosome"], locus2["Chromosome"])
+
+            # resizing
+            result_matrix = resize_window(result_matrix, expected_size = expected_size)
+            # TODO: add tracks resizing
+
+        else:
+            # masking
+            result_matrix = mask_diagonal(result_matrix, 
+                                        locus1, 
+                                        locus2, 
+                                        self._binning, 
+                                        diagonal_masking,
+                                        center = self._center)
+            # detrending
+            if ps_detrending:
+                result_matrix = self.detrend(result_matrix, locus1, locus2, is_trans = pair["Trans"], is_circular = bool(pair["Chrom1_circular"]))
             
         # flipping if required and on diagonal
         if self._flip:
             result_matrix, tracks = self.flip(result_matrix, tracks, locus1, locus2, is_contact=pair['Locus1']!=pair['Locus2'])
 
-        if tracks is not None:
-            result_matrix = np.concatenate([result_matrix, tracks], axis = 0)
+        if subtrack1 is not None:
+            result_matrix = np.concatenate([result_matrix, subtrack1], axis = 0)
+
+        if subtrack2 is not None:
+            result_matrix = np.concatenate([result_matrix, subtrack2], axis = 0)
+
         return result_matrix
