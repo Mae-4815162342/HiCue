@@ -486,6 +486,22 @@ def split_gff(gff_path, outpath = None):
 
 ### region mode methods
 
+def apply_padding(record, padding = 1.0):
+    """Computes the padding of a record and adds the "Padded_start" and "Padded_end" properties to the record object."""
+    if padding == None:
+        print(f"Error: no padding applied to {record}")
+        return record
+    
+    record_size = abs(record["End"] - record["Start"])
+    padding = math.floor(record_size * padding)
+
+    return record | {
+        "Size": record_size,
+        "Padded_start": (record["Start"] - padding),
+        "Padded_end": (record["End"] + padding),
+        "Padding": padding
+    }
+
 # extracting individual windows from the list of regions
 def extract_window_region(cool, region1, region2, is_loc_circ1 = False, is_loc_circ2 = False, raw = False):
     """Extracts a submatrix of regions interaction zone from cool matrix.
@@ -659,31 +675,34 @@ def get_dist_to_diag_matrix(cool, region1, region2):
     binning = cool.binsize
     chrom1_bin = cool.chromsizes[region1["Chromosome"]] // binning
     chrom2_bin = cool.chromsizes[region2["Chromosome"]] // binning
-
     start1 = adjust_locus(region1["Padded_start"], cool.chromsizes[region1["Chromosome"]])
     end1 = adjust_locus(region1["Padded_end"], cool.chromsizes[region1["Chromosome"]])
     start2 = adjust_locus(region2["Padded_start"], cool.chromsizes[region2["Chromosome"]])
     end2 = adjust_locus(region2["Padded_end"], cool.chromsizes[region2["Chromosome"]])
-    
-    # Computing the origin bin (up left bin) of the distance matrix value k
+
+    # Computing bin indices
     start1 = start1 // binning
     start2 = start2 // binning
-    k = abs(start2 - start1)
-    
-    # Computing matrix dimensions
     end1 = end1 // binning if end1 % binning != 0 else (end1 - 1) // binning
     end2 = end2 // binning if end2 % binning != 0 else (end2 - 1) // binning
+
+    # Computing matrix dimensions (accounting for circular overflow)
     dim0 = end1 - start1 + 1 if start1 <= end1 else (chrom1_bin - start1) + end1 + 2
     dim1 = end2 - start2 + 1 if start2 <= end2 else (chrom2_bin - start2) + end2 + 2
-    
-    # Filling the dist matrix
-    dist_array = np.empty((dim0,  dim1))
+
+    # Early return for inter-chromosomal
+    dist_array = np.empty((dim0, dim1))
     if region1["Chromosome"] != region2["Chromosome"]:
         return dist_array
-    dist_array[0, 0] = k
+
+    # Filling the dist matrix with circular distance
     for i in range(dim0):
+        bin_i = (start1 + i) % chrom1_bin
         for j in range(dim1):
-            dist_array[i, j] = abs(k - i + j)
+            bin_j = (start2 + j) % chrom2_bin  # chrom1_bin == chrom2_bin here (same chrom)
+            diff = (bin_j - bin_i) % chrom1_bin
+            dist_array[i, j] = min(diff, chrom1_bin - diff)
+
     return dist_array.astype(int)
     
 def compute_chromosome_diag_mask(chromsize, diagonal_masking, binning, is_circular = False):

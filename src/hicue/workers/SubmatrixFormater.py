@@ -90,7 +90,7 @@ class SubmatrixFormater():
                 finally:
                     chrom_matrix = np.concatenate([np.concatenate([chrom_matrix, chrom_matrix], axis = 0), np.concatenate([chrom_matrix, chrom_matrix], axis = 0)], axis = 1) if is_circular else chrom_matrix
                     ps = distance_law(chrom_matrix, method = self._method)
-                    ps = np.concatenate([ps, np.empty(len(ps))]) if not is_circular else ps
+                    ps = np.concatenate([ps, [np.nan for _ in range(len(ps))]]) if not is_circular else ps
                 if self._log is not None:
                     self._log.write(f"Distance law for chromosome {chromosome} computed in {time.time() - start_time} seconds\n")
                 chrom_ps[chromosome] = ps

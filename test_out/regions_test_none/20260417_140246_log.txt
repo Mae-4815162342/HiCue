@@ -1,0 +1,47 @@
+Regions mode.
+Executing command: hicue regions test_out/regions_test_none test_data/regions/3D7_only_chrom7.bed test_data/regions/MicroC-Bartfai-Control.mcool::resolutions/5000 --loops --separate_by chroms --windows 100000 --padding 1.0 --nb_pos 10 --no-batch --no-loci --format png,pdf --save_tmp --detrending none -e 20,51 --cmap_limits -0.2 0.2
+Extracting from ['test_data/regions/MicroC-Bartfai-Control.mcool::resolutions/5000']
+                positions file: ('bed', 'test_data/regions/3D7_only_chrom7.bed')
+                outpath: test_out/regions_test_none
+        
+Options:
+        loops = True
+        separate_by = ['chroms']
+        windows = [100000]
+        padding = 1.0
+        nb_pos = 10
+        batch = False
+        loci = False
+        format = ['png', 'pdf']
+        save_tmp = True
+        detrending = none
+        expected_sizes = [20, 51]
+        cmap_limits = (-0.2, 0.2)
+        min_region_size = 20000
+        gff = None
+        tracks = None
+        binnings = [1000]
+        method = median
+        flip = False
+        raw = False
+        threads = 8
+        track_unit = 
+        rand_max_dist = 100000
+        random_jitter = 0
+        random_path = None
+        circulars = ['none']
+        trans = False
+        min_dist = 30000
+        diag_mask = 0
+        pileup = True
+        display_strand = False
+        indiv_cmap_limits = None
+        cmap_color = seismic
+        indiv_cmap_color = afmhot_r
+        display_sense = forward
+        center = start
+        overlap = strict
+        separation_regions = None
+        contact_range = None
+        record_type = None
+Total time: 2.995609998703003 seconds (0.04992683331171672 min)

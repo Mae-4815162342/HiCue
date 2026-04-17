@@ -1,4 +1,5 @@
 from hicue.imports import *
+from hicue.utils import apply_padding
 
 # global parameters
 global position_id
@@ -53,18 +54,6 @@ class Parser():
         self._no_pairing = no_pairing
         self._padding = padding
 
-    def apply_padding(self, record):
-        """Computes the padding of a record and adds the "Padded_start" and "Padded_end" properties to the record object."""
-        record_size = abs(record["End"] - record["Start"])
-        padding = math.floor(record_size * self._padding)
-
-        return record | {
-            "Size": record_size,
-            "Padded_start": (record["Start"] - padding),
-            "Padded_end": (record["End"] + padding),
-            "Padding": padding
-        }
-
     def parse_bed2d_line(self, line):
         """Parses a line from a BED2D formated file"""
         fields = line.split('\t')
@@ -90,7 +79,7 @@ class Parser():
         hash2 = f"{record2['Chromosome']},{record2['Start']},{record2['End']},{record2['Strand']}".encode("ascii")
         
         if self._padding is not None:
-            return [self.apply_padding(record1), self.apply_padding(record2)], [hash1, hash2]
+            return [apply_padding(record1, self._padding), apply_padding(record2, self._padding)], [hash1, hash2]
 
         return [record1, record2], [hash1, hash2]
 
@@ -113,7 +102,7 @@ class Parser():
         hash = f"{record['Chromosome']},{record['Start']},{record['End']},{record['Strand']}".encode("ascii")
 
         if self._padding is not None:
-            return [self.apply_padding(record)], [hash]
+            return [apply_padding(record, self._padding)], [hash]
 
         return [record], [hash]
 
@@ -131,7 +120,7 @@ class Parser():
         hash = f"{record['Chromosome']},{record['Start']},{record['End']},{record['Strand']}".encode("ascii")
 
         if self._padding is not None:
-            return [self.apply_padding(record)], [hash]
+            return [apply_padding(record, self._padding)], [hash]
 
         return [record], [hash]
 
