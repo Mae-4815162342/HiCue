@@ -304,6 +304,7 @@ def regions(cool_files, positions, outpath, log = None, **params):
         "track_unit" : params['track_unit'],
         "display_strand" : params["display_strand"], 
         "display_sense" : params["display_sense"],
+        "display_log": params['display_log'],
         "flipped": params["flip"],
         "cmap": params["indiv_cmap_limits"],
         "color": params["indiv_cmap_color"]
@@ -321,6 +322,7 @@ def regions(cool_files, positions, outpath, log = None, **params):
         "output_format": params["format"],
         "display_strand" : params["display_strand"], 
         "display_sense" : params["display_sense"],
+        "display_log": params['display_log'],
         "flipped": params["flip"],
         "cmap": params["cmap_limits"],
         "cmap_color": params["cmap_color"]
@@ -340,7 +342,7 @@ def regions(cool_files, positions, outpath, log = None, **params):
     if params['tracks']:
         annotation['tracks'] = params['tracks']
 
-    reader = Reader(pos_file, pos_type, annotation_files = annotation, save_to = "", padding = params['padding'], loop = params['loops'], record_type = params['record_type'], overlap = params['overlap'])# TODO: option on verbose annotation
+    reader = Reader(pos_file, pos_type, annotation_files = annotation, save_to = "", padding = params['padding'], loop = params['loops'], record_type = params['record_type'], min_region_size = params['min_region_size'], overlap = params['overlap'])# TODO: option on verbose annotation
     positions, pairing_queue = reader.read_file(threads = threads)
 
     ## Formating indexes pairs

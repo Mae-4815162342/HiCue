@@ -1,0 +1,49 @@
+Regions mode.
+Executing command: hicue regions test_out/regions_test_ps test_data/regions/3D7_only_chrom7.bed test_data/regions/MicroC-Bartfai-Control.mcool::resolutions/5000 --separate_by chroms --min_region_size 5000 --padding 1.0 --batch --no-loci --no-display_log --format png,pdf --save_tmp --detrending ps -e 20,51
+Extracting from ['test_data/regions/MicroC-Bartfai-Control.mcool::resolutions/5000']
+                positions file: ('bed', 'test_data/regions/3D7_only_chrom7.bed')
+                outpath: test_out/regions_test_ps
+        
+Options:
+        separate_by = ['chroms']
+        min_region_size = 5000
+        padding = 1.0
+        batch = True
+        loci = False
+        display_log = False
+        format = ['png', 'pdf']
+        save_tmp = True
+        detrending = ps
+        expected_sizes = [20, 51]
+        gff = None
+        tracks = None
+        binnings = [1000]
+        windows = [30000]
+        method = median
+        flip = False
+        raw = False
+        threads = 8
+        track_unit = 
+        nb_pos = 2
+        rand_max_dist = 100000
+        random_jitter = 0
+        random_path = None
+        circulars = ['none']
+        loops = False
+        trans = False
+        min_dist = 30000
+        diag_mask = 0
+        pileup = True
+        display_strand = False
+        cmap_limits = None
+        indiv_cmap_limits = None
+        cmap_color = seismic
+        indiv_cmap_color = afmhot_r
+        display_sense = forward
+        center = start
+        overlap = strict
+        separation_regions = None
+        contact_range = None
+        record_type = None
+Distance law for chromosome Pf3D7_07_v3 computed in 0.15286564826965332 seconds
+Total time: 2.132582664489746 seconds (0.03554304440816244 min)

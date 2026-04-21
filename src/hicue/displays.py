@@ -839,7 +839,7 @@ async def display_pileup(
     binning=1000, cmap=None, cmap_color="seismic",
     title="", outpath="", output_format=['.pdf'],
     display_strand=True, flipped=False, display_sense="forward",
-    is_contact=False, track_label="Average Track", track_unit="", is_region = False, padding = None,
+    is_contact=False, track_label="Average Track", track_unit="", is_region = False, padding = None, display_log = True
 ):
     """Render and save pileup figures (one per window size).
 
@@ -936,6 +936,7 @@ async def display_pileup(
         )
 
         pileup_sense = np.flip(pileup_matrix) if display_sense == "reverse" else pileup_matrix
+        pileup_sense = np.log10(pileup_sense) if display_log else pileup_sense
 
         if len(track_pileup) == 0:
             # --- Simple pileup (matrix only) ---
@@ -943,7 +944,7 @@ async def display_pileup(
             plt.title(pileup_title)
             if is_region:
                 mat = plt.imshow(
-                    np.log10(pileup_sense),
+                    pileup_sense,
                     cmap=cmap_color, vmin=vmin, vmax=vmax,
                     interpolation = None
                 )
@@ -959,14 +960,14 @@ async def display_pileup(
                 match display_sense:
                     case "forward":
                         mat = plt.imshow(
-                            np.log10(pileup_sense),
+                            pileup_sense,
                             extent=[-size_metric // 1000, size_metric // 1000,
                                     size_metric // 1000, -size_metric // 1000],
                             cmap=cmap_color, vmin=vmin, vmax=vmax,
                         )
                     case "reverse":
                         mat = plt.imshow(
-                            np.log10(pileup_sense),
+                            pileup_sense,
                             extent=[size_metric // 1000, -size_metric // 1000,
                                     -size_metric // 1000,  size_metric // 1000],
                             cmap=cmap_color, vmin=vmin, vmax=vmax,
@@ -1003,7 +1004,7 @@ async def display_pileup(
             ax = plt.subplot(gs[:4, 0])
             if is_region:
                 mat = ax.imshow(
-                    np.log10(pileup_sense),
+                    pileup_sense,
                     cmap=cmap_color, vmin=vmin, vmax=vmax,
                     interpolation = None
                 )
@@ -1019,14 +1020,14 @@ async def display_pileup(
                 match display_sense:
                     case "forward":
                         mat = ax.imshow(
-                            np.log10(pileup_sense),
+                            pileup_sense,
                             extent=[-size_metric // 1000, size_metric // 1000,
                                     size_metric // 1000, -size_metric // 1000],
                             cmap=cmap_color, vmin=vmin, vmax=vmax,
                         )
                     case "reverse":
                         mat = ax.imshow(
-                            np.log10(pileup_sense),
+                            pileup_sense,
                             extent=[size_metric // 1000, -size_metric // 1000,
                                     -size_metric // 1000,  size_metric // 1000],
                             cmap=cmap_color, vmin=vmin, vmax=vmax,
