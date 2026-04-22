@@ -43,9 +43,11 @@ class RegionExtracter():
     def extract_pair(self, pair):
         """Calls the extract function on the pair for each expected size. Yields a square submatrix as a numpy array."""
         for expected_size in self._expected_sizes:
+            position1 = self._positions.loc[pair['Locus1']]
+            position2 = self._positions.loc[pair['Locus2']]
             submatrix = extract_window_region(self._cool_file, 
-                                            self._positions.loc[pair['Locus1']], 
-                                            self._positions.loc[pair['Locus2']],
+                                            position1, 
+                                            position2,
                                             is_loc_circ1 = bool(pair['Chrom1_circular']),
                                             is_loc_circ2 = bool(pair['Chrom2_circular']),
                                             raw = self._raw)
@@ -55,21 +57,19 @@ class RegionExtracter():
                 continue
 
             subtracks1, subtracks2 = None, None
-            if self._tracks: # TODO: addapt to region
-                subtracks1 = extract_tracks(self._tracks, 
-                                    self._positions.loc[pair['Locus1']],
+            if self._tracks:
+                subtracks1 = extract_tracks_regions(self._tracks, 
+                                    position1,
                                     self._binning,
-                                    expected_size, 
-                                    is_loc_circ = bool(pair['Chrom1_circular']),
-                                    center = self._center)
-                # submatrix = np.concatenate([submatrix, [subtracks1]], axis = 0)
+                                    self._cool_file.chromsizes[position1["Chromosome"]], 
+                                    is_loc_circ = bool(pair['Chrom1_circular']))
+                
                 if pair['Locus1'] != pair['Locus2']:
-                    subtracks2 = extract_tracks(self._tracks, 
-                                        self._positions.loc[pair['Locus2']],
+                    subtracks2 = extract_tracks_regions(self._tracks, 
+                                        position2,
                                         self._binning,
-                                        expected_size, 
-                                        is_loc_circ = bool(pair['Chrom2_circular']),
-                                        center = self._center)
-                    # submatrix = np.concatenate([submatrix, [subtracks2]], axis = 0)
+                                        self._cool_file.chromsizes[position2["Chromosome"]], 
+                                        is_loc_circ = bool(pair['Chrom2_circular']))
+                    
             yield expected_size, submatrix, [subtracks1, subtracks2]
     

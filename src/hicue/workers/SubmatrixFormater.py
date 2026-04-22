@@ -168,7 +168,6 @@ class SubmatrixFormater():
     def format(self, matrix, tracks, pair, is_region = False, expected_size = 0):
         """Applies all formating operations to a submatrix."""
         result_matrix = matrix
-        subtrack1, subtrack2 = tracks[0], tracks[1]
 
         locus1 = self._positions.loc[pair['Locus1']]
         locus2 = self._positions.loc[pair['Locus2']]
@@ -197,10 +196,6 @@ class SubmatrixFormater():
                     else:
                         result_matrix = result_matrix / self.get_trans_av(locus1["Chromosome"], locus2["Chromosome"])
 
-            # resizing
-            result_matrix = resize_window(result_matrix, expected_size = expected_size)
-            # TODO: add tracks resizing
-
         else:
             # masking
             result_matrix = mask_diagonal(result_matrix, 
@@ -217,10 +212,14 @@ class SubmatrixFormater():
         if self._flip:
             result_matrix, tracks = self.flip(result_matrix, tracks, locus1, locus2, is_contact=pair['Locus1']!=pair['Locus2'])
 
+        subtrack1, subtrack2 = tracks[0], tracks[1]
+
         if subtrack1 is not None:
-            result_matrix = np.concatenate([result_matrix, subtrack1], axis = 0)
+            result_subtrack1 = resize_tracks(subtrack1, expected_size) if is_region else subtrack1.reshape(1, -1)
+            result_matrix = np.concatenate([result_matrix, result_subtrack1], axis = 0)
 
         if subtrack2 is not None:
-            result_matrix = np.concatenate([result_matrix, subtrack2], axis = 0)
+            result_subtrack2 = resize_tracks(subtrack2, expected_size) if is_region else subtrack2.reshape(1, -1)
+            result_matrix = np.concatenate([result_matrix, result_subtrack2], axis = 0)
 
         return result_matrix

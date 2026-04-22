@@ -31,7 +31,8 @@ def extract(cool_files, positions, outpath, log = None, **params):
         "display_sense" : params["display_sense"],
         "flipped": params["flip"],
         "cmap": params["indiv_cmap_limits"],
-        "color": params["indiv_cmap_color"]
+        "color": params["indiv_cmap_color"],
+        "display_tracks": params["tracks"] != None
     }
 
     random_params = {
@@ -48,7 +49,7 @@ def extract(cool_files, positions, outpath, log = None, **params):
         "display_sense" : params["display_sense"],
         "flipped": params["flip"],
         "cmap": params["cmap_limits"],
-        "cmap_color": params["cmap_color"]
+        "cmap_color": params["cmap_color"] if params["detrending"] != "none" else "afmhot_r"
     }
 
     # checking multiprocessing values
@@ -103,6 +104,7 @@ def extract(cool_files, positions, outpath, log = None, **params):
     
     ## Matrix extraction
     matrix_extractor = MatrixExtractorLauncher(cool_files,
+                                               tracks = params["tracks"],
                                                nb_pos = np.max(positions.index),
                                                compute_pileups = params["pileup"],
                                                binnings = params["binnings"], 
@@ -192,7 +194,7 @@ def tracks(cool_files, tracks, outpath, log = None, **params):
         "display_sense" : params["display_sense"],
         "flipped": params["flip"],
         "cmap": params["cmap_limits"],
-        "cmap_color": params["cmap_color"]
+        "cmap_color": params["cmap_color"] if params["detrending"] != "none" else "afmhot_r"
     }
 
     pos_type, pos_file = params['positions'] or (None, None)
@@ -307,7 +309,8 @@ def regions(cool_files, positions, outpath, log = None, **params):
         "display_log": params['display_log'],
         "flipped": params["flip"],
         "cmap": params["indiv_cmap_limits"],
-        "color": params["indiv_cmap_color"]
+        "color": params["indiv_cmap_color"],
+        "display_tracks": params["tracks"] != None
     }
 
     random_params = {
@@ -325,7 +328,7 @@ def regions(cool_files, positions, outpath, log = None, **params):
         "display_log": params['display_log'],
         "flipped": params["flip"],
         "cmap": params["cmap_limits"],
-        "cmap_color": params["cmap_color"]
+        "cmap_color": params["cmap_color"] if params["detrending"] != "none" else "afmhot_r"
     }
 
     # checking multiprocessing values
@@ -380,6 +383,7 @@ def regions(cool_files, positions, outpath, log = None, **params):
     
     ## Matrix extraction
     matrix_extractor = MatrixExtractorLauncher(cool_files,
+                                               tracks = params["tracks"],
                                                nb_pos = np.max(positions.index),
                                                compute_pileups = params["pileup"],
                                                binnings = params["binnings"], 
@@ -404,7 +408,7 @@ def regions(cool_files, positions, outpath, log = None, **params):
         pileups_random = {}
         if params['detrending'] == "patch":
             pileups_random_queue = matrix_extractor.launch_extraction(random_positions, random_pairs, randoms = True, threads=threads)
-            pileups_random = empty_queue_in_dict(pileups_random_queue, keys = ["sep_id", "binning", "cool_name"]) # exporting the patch detrending as an dict for access
+            pileups_random = empty_queue_in_dict(pileups_random_queue, keys = ["sep_id", "binning", "cool_name"]) # exporting the patch detrending as a dict for access
 
         ## Pileup detrending and display
         pileup_display_args["display_strand"] = pileup_display_args["display_strand"] and (0 not in positions["Strand"])

@@ -231,6 +231,38 @@ def extract_tracks(tracks, locus, binning, window, is_loc_circ = False, center="
 
     return subtracks
 
+def extract_tracks_regions(tracks, region, binning, chromsize, is_loc_circ = False): 
+    """Extracts a region from tracks, binned at binning."""
+    # 1. Computing start and end coordinates    
+    start = adjust_locus(region["Padded_start"], chromsize)
+    end = adjust_locus(region["Padded_end"], chromsize)
+    start_binned = start // binning
+    end_binned = end // binning + (1 if end % binning != 0 else 0)
+
+    # 2. computing overflow
+    region_overflow = start >= end
+    lower_overflow = chromsize - start < end
+    bins_to_fill = (chromsize // binning - start_binned) + 1 if lower_overflow else end_binned
+    
+    # 3. fetching main subtracks
+    subtracks = bin_tracks(tracks, region["Chromosome"], start, end, binning)
+
+    # 4. managing overflows
+    if is_loc_circ:
+        fill = bin_tracks(tracks, region["Chromosome"], start, chromsize, binning) if lower_overflow else bin_tracks(tracks, region["Chromosome"], start, chromsize, binning) 
+    else:
+        fill = [np.nan] * bins_to_fill
+    
+    to_concat = [fill, subtracks] if lower_overflow else [subtracks, fill]
+    subtracks = np.concatenate(to_concat)
+
+    return subtracks
+
+def resize_tracks(track, expected_size):
+    """Resizes a track at the expected size."""
+    resized_track = np.interp(np.linspace(0, len(track) - 1, expected_size), np.arange(len(track))[~np.isnan(track)], track[~np.isnan(track)])
+    return resized_track.reshape((1, -1))
+
 def compute_distance(locus1, locus2, center = "start"):
     """Returns the distance in base pairs between two position. None if not in the same chromosome."""
     if locus1["Chromosome"] != locus2["Chromosome"]:
