@@ -1,12 +1,14 @@
 from hicue.utils import *
 
 class RandomSelector():
-    def __init__(self, positions, center = "start", selection_window = 100000, nb_rand_per_pos = 1, random_jitter = 0):
+    def __init__(self, positions, center = "start", selection_window = 100000, nb_rand_per_pos = 1, random_jitter = 0, is_region = False, padding = None):
         self._positions = positions
         self._center = center
         self._nb_rand_per_pos = nb_rand_per_pos
         self._selection_window = selection_window
         self._jitter = random_jitter
+        self._is_region = is_region
+        self._padding = padding
         
     @staticmethod
     def stream_pairs(pairs, queue):
@@ -31,7 +33,9 @@ class RandomSelector():
                     center = self._center,
                     nb_rand_per_pos = self._nb_rand_per_pos,
                     selection_window = self._selection_window,
-                    jitter = self._jitter
+                    jitter = self._jitter,
+                    is_region = self._is_region,
+                    padding = self._padding
                 )        
 
         self.stream_pairs(pairs, pairs_queue)

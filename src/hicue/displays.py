@@ -326,6 +326,56 @@ def plot_map(ax, matrix, loc1, loc2, window, locus1, locus2,
 
     return mat
 
+def plot_map_region(ax, matrix, region1, region2, padding, is_contact = False,
+             title="", display_sense="forward",
+             display_strand=False, flipped=False,
+             cmap=None, color="afmhot_r",
+             show_title=True, log=True,strand_level=1.2, adjustment=0.9):
+
+    name = (f"{region1['Name'].replace('/', '_')}"
+            if not is_contact
+            else f"{region1['Name'].replace('/', '_')}-{region2['Name'].replace('/', '_')}")
+    title = name if len(title) == 0 else title
+    if show_title:
+        ax.set_title(title)
+
+    # Log-transform (suppressing divide-by-zero warnings on zero contacts).
+    with np.errstate(divide='ignore', invalid='ignore'):
+        display_matrix = np.log10(matrix) if log else matrix
+
+    vmin = cmap[0] if cmap is not None else None
+    vmax = cmap[1] if cmap is not None else None
+
+    forward_labels = ["Start", "End"]
+    reverse_labels = ["End", "Start"]
+    padding_size = padding * matrix.shape[0] /(2 * padding + 1)
+    
+    match display_sense:
+        case "forward":
+            axis_labels = forward_labels if region2["Strand"] != -1 or not flipped else reverse_labels
+            mat = ax.imshow(display_matrix, cmap=color, vmin=vmin, vmax=vmax, interpolation = None)
+            
+        case "reverse":
+            axis_labels = reverse_labels if region2["Strand"] != -1 or not flipped else forward_labels
+            mat = ax.imshow(np.flip(display_matrix), cmap=color, vmin=vmin, vmax=vmax, interpolation = None)
+            
+    ax_start, ax_end = ax.get_xlim()
+    labels_indexes = [ax_start + padding_size, ax_end - padding_size]
+    
+    ax.set_xticks(labels_indexes, axis_labels)
+    ax.set_yticks(labels_indexes, axis_labels)
+
+    # TODO: to re-write for region mode
+    # if display_strand:
+    #     plot_strands(ax, region1, region2, window,
+    #                  is_contact=(region1['Name'] != region2['Name']),
+    #                  display_sense=display_sense,
+    #                  flip=flipped,
+    #                  strand_level=strand_level,
+    #                  adjustment=adjustment)
+
+    return mat
+
 
 def plot_tracks(tracks, ax_tracks, start, stop,
                 axis="horizontal", xlabel="", ylabel="", flip=False):
@@ -380,12 +430,13 @@ def plot_tracks(tracks, ax_tracks, start, stop,
 # ---------------------------------------------------------------------------
 
 async def display_submatrix(
-    matrix, pair, window,
+    matrix, pair, size_metric,
     binning=1000, outfolder="", positions=None,
     output_format=['pdf'], chromsizes={},
     display_strand=False, flipped=False, display_sense="forward",
     cmap=None, color="afmhot_r",
-    display_tracks=False, track_unit=""
+    display_tracks=False, track_unit="",
+    is_region = False, padding = None, display_log = True
 ):
     """Render and save a single submatrix figure.
 
@@ -433,7 +484,7 @@ async def display_submatrix(
         Unit label for the track Y axis.
     """
     # Resolve output sub-folder.
-    individual_outfolder = f"{outfolder}/individual_{window // 1000}kb_window"
+    individual_outfolder = f"{outfolder}/individual_{size_metric // 1000}kb_window" if not is_region else f"{outfolder}/individual_{size_metric}px"
     create_folder_path(individual_outfolder)
 
     i, j = pair["Locus1"], pair["Locus2"]
@@ -462,18 +513,27 @@ async def display_submatrix(
     if len(subtracks) == 0 or not display_tracks:
         # --- Simple matrix-only layout ---
         plt.figure(figsize=(6, 6))
-        mat = plot_map(
-            plt.gca(), submatrix, i, j, window, pos1, pos2,
-            pair["Chrom1_circular"], pair["Chrom2_circular"],
-            title=title, chromsizes=chromsizes,
-            display_sense=display_sense, display_strand=display_strand,
-            flipped=flipped, strand_level=1.2, cmap=cmap, color=color,
-        )
+        if is_region:
+            mat = plot_map_region(plt.gca(), submatrix, pos1, pos2, padding, 
+                is_contact=is_contact,
+                title=title, display_sense=display_sense,
+                display_strand=display_strand, flipped=flipped,
+                cmap=cmap, color=color, log=display_log, 
+                strand_level=1.2)
+        else:
+            mat = plot_map(
+                plt.gca(), submatrix, i, j, size_metric, pos1, pos2,
+                pair["Chrom1_circular"], pair["Chrom2_circular"],
+                title=title, chromsizes=chromsizes,
+                display_sense=display_sense, display_strand=display_strand,
+                flipped=flipped, strand_level=1.2, cmap=cmap, color=color,
+                log = display_log
+            )
         plt.colorbar(mat, fraction=0.01)
-        plot_xlabel = "\n" + f"{pos2['Chromosome']} Genomic coordinates (in kb)"
+        plot_xlabel = "\n" + f"{pos2['Chromosome']} Genomic coordinates (in kb)" if not is_region else "\n" + f"{pos2['Chromosome']} Resized genomic coordinates"
         plot_xlabel += "\n" + x_label if len(x_label) > 0 else ""
         plt.xlabel(plot_xlabel)
-        plot_ylabel = f"{pos1['Chromosome']} Genomic coordinates (in kb)"
+        plot_ylabel = f"{pos1['Chromosome']} Genomic coordinates (in kb)" if not is_region else "\n" + f"{pos1['Chromosome']} Resized genomic coordinates"
         plot_ylabel = y_label + "\n" + plot_ylabel if len(y_label) > 0 else plot_ylabel
         plt.ylabel(plot_ylabel)
 
@@ -496,15 +556,26 @@ async def display_submatrix(
 
         # Matrix sub-plot (top 4 rows, left column).
         ax = plt.subplot(gs[:4, 0])
-        mat = plot_map(
-            ax, submatrix, i, j, window, pos1, pos2,
-            pair["Chrom1_circular"], pair["Chrom2_circular"],
-            title=title, show_title=(not is_contact),
-            chromsizes=chromsizes,
-            display_sense=display_sense, display_strand=display_strand,
-            flipped=flipped, strand_level=1.2, adjust=False,
-            cmap=cmap, color=color,
-        )
+
+        if is_region:
+            mat = plot_map_region(ax, submatrix, pos1, pos2, padding, 
+                is_contact=is_contact,
+                title=title, display_sense=display_sense,
+                display_strand=display_strand, flipped=flipped,
+                cmap=cmap, color=color, log=display_log, 
+                strand_level=1.8 if is_contact else 1.75,
+                adjust=False, show_title=(not is_contact))
+        else:
+        
+            mat = plot_map(
+                ax, submatrix, i, j, size_metric, pos1, pos2,
+                pair["Chrom1_circular"], pair["Chrom2_circular"],
+                title=title, show_title=(not is_contact),
+                chromsizes=chromsizes,
+                display_sense=display_sense, display_strand=display_strand,
+                flipped=flipped, strand_level=1.2, adjust=False,
+                cmap=cmap, color=color, log = display_log
+            )
 
         # Colour bar (small sub-plot, right column).
         ax_cb = plt.subplot(gs[1, width - 1])
@@ -512,7 +583,7 @@ async def display_submatrix(
 
         track_labelling = track_unit
         ax_tracks = plt.subplot(gs[4, 0], sharex=ax)
-        plot_xlabel = "\n" + f"{pos2['Chromosome']} Genomic coordinates (in kb)"
+        plot_xlabel = "\n" + f"{pos2['Chromosome']} Genomic coordinates (in kb)" if not is_region else "\n" + f"{pos2['Chromosome']} Resized genomic coordinates"
         plot_xlabel += "\n" + x_label if len(x_label) > 0 else ""
 
         if not is_contact:
@@ -552,7 +623,7 @@ async def display_submatrix(
             chromsizes,
         )
 
-        plot_ylabel = f"{pos1['Chromosome']} Genomic coordinates (in kb)"
+        plot_ylabel = f"{pos1['Chromosome']} Genomic coordinates (in kb)" if not is_region else "\n" + f"{pos2['Chromosome']} Resized genomic coordinates"
         plot_ylabel = y_label + "\n" + plot_ylabel if len(y_label) > 0 else plot_ylabel
         ax.set_ylabel(plot_ylabel)
 
@@ -566,12 +637,12 @@ async def display_submatrix(
 
 
 async def display_batch_submatrices(
-    submatrices, positions, window,
+    submatrices, positions, size_metric,
     title="", batch_size=64, outfolder="",
     output_format=['pdf'], chromsizes={},
     display_strand=False, flipped=False, display_sense="forward",
     display_tracks=False, track_unit="",
-    cmap=None, color="afmhot_r"
+    cmap=None, color="afmhot_r", is_region = False, padding = None, display_log = True
 ):
     """Render and save a multi-panel batch figure.
 
@@ -615,7 +686,7 @@ async def display_batch_submatrices(
     color : str, optional
         Matplotlib colormap name.
     """
-    batched_outfolder = f"{outfolder}/batched_{window // 1000}kb_window"
+    batched_outfolder = f"{outfolder}/batched_{size_metric // 1000}kb_window" if not is_region else f"{outfolder}/batched_{size_metric}px"
     create_folder_path(batched_outfolder)
 
     cols = math.ceil(math.sqrt(batch_size))
@@ -663,18 +734,30 @@ async def display_batch_submatrices(
         if not display_tracks:
             # --- Simple grid cell (matrix only) ---
             ax = plt.subplot(gs[i, j])
-            plot_map(
-                ax, submatrix, loc1, loc2, window, pos1, pos2,
-                is_chrom1_circ, is_chrom2_circ,
-                title=map_title, display_sense=display_sense,
-                chromsizes=chromsizes, display_strand=display_strand,
-                flipped=flipped, strand_level=1.6, adjustment=0.6,
-                cmap=cmap, color=color,
-            )
-            if k >= nb_matrices - cols:
-                ax.set_xlabel('\nGenomic\ncoordinates in kb')
-            if j == 0:
-                ax.set_ylabel('Genomic\ncoordinates in kb\n')
+            if is_region:
+                plot_map_region(ax, submatrix, pos1, pos2, padding, 
+                            is_contact=is_contact,
+                            title=map_title, display_sense=display_sense,
+                            display_strand=display_strand, flipped=flipped,
+                            cmap=cmap, color=color, log=display_log, 
+                            strand_level=1.6, adjustment=0.6,)
+                if k >= nb_matrices - cols:
+                    ax.set_xlabel('\nResized\ngenomic\ncoordinates')
+                if j == 0:
+                    ax.set_ylabel('Resized\ngenomic\ncoordinates\n')
+            else:
+                plot_map(
+                    ax, submatrix, loc1, loc2, size_metric, pos1, pos2,
+                    is_chrom1_circ, is_chrom2_circ,
+                    title=map_title, display_sense=display_sense,
+                    chromsizes=chromsizes, display_strand=display_strand,
+                    flipped=flipped, strand_level=1.6, adjustment=0.6,
+                    cmap=cmap, color=color, log = display_log
+                )
+                if k >= nb_matrices - cols:
+                    ax.set_xlabel('\nGenomic\ncoordinates in kb')
+                if j == 0:
+                    ax.set_ylabel('Genomic\ncoordinates in kb\n')
 
         else:
             # --- Grid cell with embedded track sub-plots ---
@@ -687,16 +770,25 @@ async def display_batch_submatrices(
                 hspace=0.6,
             )
             ax_mat = plt.subplot(subgs[0, 0])
-            plot_map(
-                ax_mat, submatrix, loc1, loc2, window, pos1, pos2,
-                is_chrom1_circ, is_chrom2_circ,
-                title=map_title, display_sense=display_sense,
-                chromsizes=chromsizes, display_strand=display_strand,
-                flipped=flipped,
-                strand_level=1.8 if is_contact else 1.75,
-                adjustment=0.55,
-                cmap=cmap, color=color,
-            )
+            if is_region:
+                plot_map_region(ax_mat, submatrix, pos1, pos2, padding, 
+                            is_contact=is_contact,
+                            title=map_title, display_sense=display_sense,
+                            display_strand=display_strand, flipped=flipped,
+                            cmap=cmap, color=color, log=display_log, 
+                            strand_level=1.8 if is_contact else 1.75,
+                            adjustment=0.55,)
+            else:
+                plot_map(
+                    ax_mat, submatrix, loc1, loc2, size_metric, pos1, pos2,
+                    is_chrom1_circ, is_chrom2_circ,
+                    title=map_title, display_sense=display_sense,
+                    chromsizes=chromsizes, display_strand=display_strand,
+                    flipped=flipped,
+                    strand_level=1.8 if is_contact else 1.75,
+                    adjustment=0.55,
+                    cmap=cmap, color=color, log = display_log
+                )
 
             ax_tracks1 = plt.subplot(subgs[1, 0], sharex=ax_mat)
             start, stop = ax_mat.get_xlim()
@@ -708,11 +800,17 @@ async def display_batch_submatrices(
                 ylabel=track_unit,
                 flip=(display_sense == "reverse"),
             )
-
+    
             if k >= nb_matrices - cols:
-                ax_tracks1.set_xlabel('\nGenomic\ncoordinates in kb')
+                if is_region:
+                    ax_tracks1.set_xlabel('\nResized\ngenomic\ncoordinates')
+                else:
+                    ax_tracks1.set_xlabel('\nGenomic\ncoordinates in kb')
             if j == 0:
-                ax_mat.set_ylabel('Genomic\ncoordinates in kb\n')
+                if is_region:
+                    ax_mat.set_ylabel('Resized\ngenomic\ncoordinates\n')
+                else:
+                    ax_mat.set_ylabel('Genomic\ncoordinates in kb\n')
 
             if is_contact and len(subtracks) > 1:
                 # Vertical track to the right (Y axis locus).
@@ -737,17 +835,17 @@ async def display_batch_submatrices(
 
 async def display_pileup(
     pileup, sep_id,
-    cool_name="", patch_detrending={}, windows=[],
+    cool_name="", patch_detrending={}, size_metrics=[],
     binning=1000, cmap=None, cmap_color="seismic",
     title="", outpath="", output_format=['.pdf'],
     display_strand=True, flipped=False, display_sense="forward",
-    is_contact=False, track_label="Average Track", track_unit=""
+    is_contact=False, track_label="Average Track", track_unit="", is_region = False, padding = None, display_log = True
 ):
     """Render and save pileup figures (one per window size).
 
     Optionally applies patch detrending (divides the pileup by a null-model
     pileup) and overlays averaged track data.  One figure is produced per
-    entry in *windows*.
+    entry in *size_metrics*.
 
     The figures are saved under
     *outpath*/{cool_name}/{sep_id}/binning_{binning}/.
@@ -763,8 +861,8 @@ async def display_pileup(
     patch_detrending : dict, optional
         Mapping of ``"{sep_id}_{binning}_{cool_name}"`` → ``{"pileup": Pileup}``
         for patch detrending.  Empty dict disables detrending.
-    windows : list[int], optional
-        List of half-window sizes in base-pairs.  One figure per window.
+    size_metrics : list[int], optional
+        List of expected or window size in pixels or base-pairs respectively.  One figure per size_metrics.
     binning : int, optional
         Bin size in base-pairs.  Default 1000.
     cmap : list[float, float] or None, optional
@@ -792,26 +890,27 @@ async def display_pileup(
     """
     vmin = None if cmap is None else cmap[0]
     vmax = None if cmap is None else cmap[1]
-    xlabel = "\nGenomic coordinates (in kb)"
-    ylabel = "Genomic coordinates (in kb)"
+    xlabel = "\nGenomic coordinates (in kb)" if not is_region else "\nResized genomic coordinates"
+    ylabel = "Genomic coordinates (in kb)" if not is_region else "Resized genomic coordinates"
 
     outfolder = f"{outpath}/{pileup.get_cool_name()}/{sep_id}/binning_{pileup.get_binning()}"
     create_folder_path(outfolder)
 
-    for window in windows:
-        pileup_matrix = pileup.get_matrix(window)
-        has_tracks = pileup.has_tracks(window)
+    for size_metric in size_metrics:
+        pileup_matrix = pileup.get_matrix(size_metric)
+        has_tracks = pileup.has_tracks(size_metric)
 
         if pileup_matrix is None:
-            print(f"Empty pileup for {sep_id} with window size {window}bp.")
+            sentence = f"Empty pileup for {sep_id} with window size {size_metric}bp." if not is_region else f"Empty pileup for {sep_id} with expected size of {size_metric}px."
+            print(sentence)
             continue
 
         track_pileup = []
         if has_tracks:
-            square_pileup_matrix = pileup_matrix[: pileup.get_size(window)]
+            square_pileup_matrix = pileup_matrix[: pileup.get_size(size_metric)]
             track_pileup = (
-                pileup_matrix[pileup.get_size(window):]
-                if len(pileup_matrix) > pileup.get_size(window)
+                pileup_matrix[pileup.get_size(size_metric):]
+                if len(pileup_matrix) > pileup.get_size(size_metric)
                 else []
             )
             pileup_matrix = square_pileup_matrix
@@ -819,8 +918,8 @@ async def display_pileup(
         # Apply patch detrending if a null-model pileup is available.
         identificator = f"{sep_id}_{binning}_{cool_name}"
         if identificator in patch_detrending:
-            detrending = patch_detrending[identificator]["pileup"].get_matrix(window)
-            detrending_size = patch_detrending[identificator]["pileup"].get_size(window)
+            detrending = patch_detrending[identificator]["pileup"].get_matrix(size_metric)
+            detrending_size = patch_detrending[identificator]["pileup"].get_size(size_metric)
             pileup_detrending = detrending[:detrending_size]
             tracks_detrending = (
                 detrending[detrending_size:]
@@ -833,30 +932,46 @@ async def display_pileup(
 
         pileup_title = (
             f"{title} pileup in {pileup.get_cool_name()} \n"
-            f"({pileup.get_nb_matrices(window)} matrices)"
+            f"({pileup.get_nb_matrices(size_metric)} matrices)"
         )
 
         pileup_sense = np.flip(pileup_matrix) if display_sense == "reverse" else pileup_matrix
+        pileup_sense = np.log10(pileup_sense) if display_log else pileup_sense
 
         if len(track_pileup) == 0:
             # --- Simple pileup (matrix only) ---
             plt.figure(figsize=(6, 6))
             plt.title(pileup_title)
-            match display_sense:
-                case "forward":
-                    mat = plt.imshow(
-                        np.log10(pileup_sense),
-                        extent=[-window // 1000, window // 1000,
-                                 window // 1000, -window // 1000],
-                        cmap=cmap_color, vmin=vmin, vmax=vmax,
-                    )
-                case "reverse":
-                    mat = plt.imshow(
-                        np.log10(pileup_sense),
-                        extent=[window // 1000, -window // 1000,
-                                -window // 1000,  window // 1000],
-                        cmap=cmap_color, vmin=vmin, vmax=vmax,
-                    )
+            if is_region:
+                mat = plt.imshow(
+                    pileup_sense,
+                    cmap=cmap_color, vmin=vmin, vmax=vmax,
+                    interpolation = None
+                )
+                padding_size = padding * pileup_sense.shape[0] /(2 * padding + 1)
+
+                axis_labels = ["Start", "End"] if display_sense == "forward" else ["End", "Start"]
+                ax_start, ax_end = plt.gca().get_xlim()
+                labels_indexes = [ax_start + padding_size, ax_end - padding_size]
+                plt.xticks(labels_indexes, axis_labels)
+                plt.yticks(labels_indexes, axis_labels)
+
+            else:
+                match display_sense:
+                    case "forward":
+                        mat = plt.imshow(
+                            pileup_sense,
+                            extent=[-size_metric // 1000, size_metric // 1000,
+                                    size_metric // 1000, -size_metric // 1000],
+                            cmap=cmap_color, vmin=vmin, vmax=vmax,
+                        )
+                    case "reverse":
+                        mat = plt.imshow(
+                            pileup_sense,
+                            extent=[size_metric // 1000, -size_metric // 1000,
+                                    -size_metric // 1000,  size_metric // 1000],
+                            cmap=cmap_color, vmin=vmin, vmax=vmax,
+                        )
             plt.colorbar(mat, fraction=0.01)
             plt.xlabel(xlabel)
             plt.ylabel(ylabel)
@@ -864,7 +979,7 @@ async def display_pileup(
             if display_strand:
                 transcription_sens = ARROW_LEFT if display_sense == "reverse" else ARROW_RIGHT
                 arrow_alignment = "right" if display_sense == "reverse" else "left"
-                to = -window // 1000 * 1.2 if display_sense == "reverse" else window // 1000 * 1.2
+                to = -size_metric // 1000 * 1.2 if display_sense == "reverse" else size_metric // 1000 * 1.2
                 plt.text(0, to, transcription_sens,
                          horizontalalignment=arrow_alignment, fontsize=20)
 
@@ -887,29 +1002,44 @@ async def display_pileup(
             )
 
             ax = plt.subplot(gs[:4, 0])
-            match display_sense:
-                case "forward":
-                    mat = plt.imshow(
-                        np.log10(pileup_sense),
-                        extent=[-window // 1000, window // 1000,
-                                 window // 1000, -window // 1000],
-                        cmap=cmap_color, vmin=vmin, vmax=vmax,
-                    )
-                case "reverse":
-                    mat = plt.imshow(
-                        np.log10(pileup_sense),
-                        extent=[window // 1000, -window // 1000,
-                                -window // 1000,  window // 1000],
-                        cmap=cmap_color, vmin=vmin, vmax=vmax,
-                    )
+            if is_region:
+                mat = ax.imshow(
+                    pileup_sense,
+                    cmap=cmap_color, vmin=vmin, vmax=vmax,
+                    interpolation = None
+                )
+                padding_size = padding * pileup_sense.shape[0] /(2 * padding + 1)
 
-            if display_strand:
-                pos = {"Start": 0, "End": 0, "Strand": 1}
-                plot_strands(ax, pos, pos, window,
-                             is_contact=is_contact,
-                             display_sense=display_sense,
-                             flip=flipped,
-                             strand_level=1.2, adjustment=0.9)
+                axis_labels = ["Start", "End"] if display_sense == "forward" else ["End", "Start"]
+                ax_start, ax_end = ax.get_xlim()
+                labels_indexes = [ax_start + padding_size, ax_end - padding_size]
+                ax.set_xticks(labels_indexes, axis_labels)
+                ax.set_yticks(labels_indexes, axis_labels)
+
+            else:
+                match display_sense:
+                    case "forward":
+                        mat = ax.imshow(
+                            pileup_sense,
+                            extent=[-size_metric // 1000, size_metric // 1000,
+                                    size_metric // 1000, -size_metric // 1000],
+                            cmap=cmap_color, vmin=vmin, vmax=vmax,
+                        )
+                    case "reverse":
+                        mat = ax.imshow(
+                            pileup_sense,
+                            extent=[size_metric // 1000, -size_metric // 1000,
+                                    -size_metric // 1000,  size_metric // 1000],
+                            cmap=cmap_color, vmin=vmin, vmax=vmax,
+                        )
+
+                if display_strand:
+                    pos = {"Start": 0, "End": 0, "Strand": 1}
+                    plot_strands(ax, pos, pos, size_metric,
+                                is_contact=is_contact,
+                                display_sense=display_sense,
+                                flip=flipped,
+                                strand_level=1.2, adjustment=0.9)
 
             ax_cb = plt.subplot(gs[1, width - 1])
             plt.colorbar(mat, fraction=0.01, cax=ax_cb)
@@ -960,8 +1090,14 @@ async def display_pileup(
 
         if len(outpath) > 0:
             for fmt in output_format:
+                pileup_name = f"pileup_{size_metric // 1000}kb_window.{fmt}" if not is_region else f"pileup_{size_metric}px.{fmt}"
                 plt.savefig(
-                    outfolder + f"/pileup_{window // 1000}kb_window.{fmt}",
+                    outfolder + "/" + pileup_name,
+                    bbox_inches="tight",
+                )
+                # copy at the outpath for easier user access
+                plt.savefig(
+                    f"{outpath}/{pileup.get_cool_name()}_{sep_id}_binning_{pileup.get_binning()}_{pileup_name}",
                     bbox_inches="tight",
                 )
         plt.close()

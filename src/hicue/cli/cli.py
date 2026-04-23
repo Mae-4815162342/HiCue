@@ -3,6 +3,7 @@ from hicue.imports import *
 from . import (
     extract,
     tracks,
+    regions,
     # compare
 )
 
@@ -13,6 +14,7 @@ def cli(ctx):
 
 cli.add_command(extract.extract)
 cli.add_command(tracks.tracks)
+cli.add_command(regions.regions)
 # cli.add_command(compare.compare)
 
 if __name__ == "__main__":

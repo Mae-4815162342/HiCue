@@ -29,7 +29,7 @@ class RandomSelectorScheduler(threading.Thread):
 
 class RandomSelector():
     """Class implementing the random selection of positions from a position."""
-    def __init__(self, output_queues, positions, nb_pairs, center = "start", selection_window = 100000, nb_rand_per_pos = 1, jitter = 0):
+    def __init__(self, output_queues, positions, nb_pairs, center = "start", selection_window = 100000, nb_rand_per_pos = 1, jitter = 0, is_region = False, padding = None):
         self._positions = positions
         self._random_queues = output_queues
         self._nb_pairs = nb_pairs
@@ -37,6 +37,8 @@ class RandomSelector():
         self._nb_rand_per_pos = nb_rand_per_pos
         self._selection_window = selection_window
         self._jitter = jitter
+        self._is_region = is_region
+        self._padding = padding
 
     def _get_center(self, position):
         start = position["Start"]
@@ -71,13 +73,17 @@ class RandomSelector():
             # first random position
             index1 =  (k * self._nb_pairs + pair_index) * 2
             random_start = int((random.random() * (interval1[1] - interval1[0]) + interval1[0]) // 1)
+            end = random_start + locus1["Size"] if self._is_region else random_start
             random_position1 = {
                 "Chromosome": locus1["Chromosome"],
                 "Start": random_start,
-                "End": random_start,
+                "End": end,
                 "Name": f"rand_pos_{index1}",
                 "Strand": locus1["Strand"]
             }
+
+            if self._is_region:
+                random_position1 = apply_padding(random_position1, self._padding)
 
             self._random_queues[0].put((index1, random_position1))
 
@@ -108,13 +114,17 @@ class RandomSelector():
                     interval2 = [center2 - self._selection_window, center2 + self._selection_window]
                     random_start2 = int((random.random() * (interval2[1] - interval2[0]) + interval2[0]) // 1)
 
+                end2 = random_start2 + locus2["Size"] if self._is_region else random_start2
                 random_position2 = {
                     "Chromosome": locus2["Chromosome"],
                     "Start": random_start2,
-                    "End": random_start2,
+                    "End": end2,
                     "Name": f"rand_pos_{index2}",
                     "Strand": locus2["Strand"]
                 }
+
+                if self._is_region:
+                    random_position2 = apply_padding(random_position2, self._padding)
 
                 random_pair["Locus2"] = index2
                 random_pair["Distance"] = random_distance

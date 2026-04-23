@@ -41,13 +41,13 @@ def position_queue_to_df(position_queue):
     
     return pd.DataFrame(position_list, index = index_list)
 
-def adjust_locus(locus_position, chromsize, is_circ_chrom = False):
+def adjust_locus(locus_position, chromsize):
         """Adjust the coordinates of a locus to fit between 0 and the chromosome size. Accounts for circularity."""
         if locus_position < 0:
-            locus_position = chromsize + locus_position if is_circ_chrom else 0
+            locus_position = chromsize + locus_position
 
         if locus_position >= chromsize:
-            locus_position = locus_position - chromsize if is_circ_chrom else chromsize
+            locus_position = locus_position - chromsize
         return locus_position
 
 def extract_window(cool, locus1, locus2, binning, window, is_loc1_circ = False, is_loc2_circ = False, center="start", raw = False): 
@@ -69,8 +69,8 @@ def extract_window(cool, locus1, locus2, binning, window, is_loc1_circ = False, 
     chrom_size1 = cool.chromsizes[locus1["Chromosome"]]
     chrom_size2 = cool.chromsizes[locus2["Chromosome"]]
 
-    start1 = adjust_locus(start1, chrom_size1, is_circ_chrom = is_loc1_circ)
-    start2 = adjust_locus(start2, chrom_size2, is_circ_chrom = is_loc2_circ)
+    start1 = adjust_locus(start1, chrom_size1)
+    start2 = adjust_locus(start2, chrom_size2)
     
     start1 = start1 + 1 if start1 % binning == 0 else start1
     start2 = start2 + 1 if start2 % binning == 0 else start2
@@ -188,7 +188,7 @@ def extract_tracks(tracks, locus, binning, window, is_loc_circ = False, center="
 
     chrom_size = tracks.chroms(locus["Chromosome"])
 
-    coordinate = adjust_locus(coordinate, chrom_size, is_circ_chrom = is_loc_circ) - 1 # re-ajusting at 0 base for bw format
+    coordinate = adjust_locus(coordinate, chrom_size) - 1 # re-ajusting at 0 base for bw format
 
     # 2. computing binned coordinates
     binned_coordinates = (coordinate // binning)*binning
@@ -230,6 +230,38 @@ def extract_tracks(tracks, locus, binning, window, is_loc_circ = False, center="
     subtracks = np.concatenate(to_concat)
 
     return subtracks
+
+def extract_tracks_regions(tracks, region, binning, chromsize, is_loc_circ = False): 
+    """Extracts a region from tracks, binned at binning."""
+    # 1. Computing start and end coordinates    
+    start = adjust_locus(region["Padded_start"], chromsize)
+    end = adjust_locus(region["Padded_end"], chromsize)
+    start_binned = start // binning
+    end_binned = end // binning + (1 if end % binning != 0 else 0)
+
+    # 2. computing overflow
+    region_overflow = start >= end
+    lower_overflow = chromsize - start < end
+    bins_to_fill = (chromsize // binning - start_binned) + 1 if lower_overflow else end_binned
+    
+    # 3. fetching main subtracks
+    subtracks = bin_tracks(tracks, region["Chromosome"], start, end, binning)
+
+    # 4. managing overflows
+    if is_loc_circ:
+        fill = bin_tracks(tracks, region["Chromosome"], start, chromsize, binning) if lower_overflow else bin_tracks(tracks, region["Chromosome"], start, chromsize, binning) 
+    else:
+        fill = [np.nan] * bins_to_fill
+    
+    to_concat = [fill, subtracks] if lower_overflow else [subtracks, fill]
+    subtracks = np.concatenate(to_concat)
+
+    return subtracks
+
+def resize_tracks(track, expected_size):
+    """Resizes a track at the expected size."""
+    resized_track = np.interp(np.linspace(0, len(track) - 1, expected_size), np.arange(len(track))[~np.isnan(track)], track[~np.isnan(track)])
+    return resized_track.reshape((1, -1))
 
 def compute_distance(locus1, locus2, center = "start"):
     """Returns the distance in base pairs between two position. None if not in the same chromosome."""
@@ -384,6 +416,60 @@ def distance_law(
 
     return dist
 
+def distance_law_genome(clr, max_dist=None, smooth=True, method="mean", weight_col="weight"):
+    
+    binsize = clr.binsize
+    chroms = clr.chromnames
+    
+    global_max_bins = max(
+        clr.extent(chrom)[1] - clr.extent(chrom)[0] for chrom in chroms
+    )
+    
+    if max_dist is None:
+        n_diags = global_max_bins
+    else:
+        n_diags = min(global_max_bins, max_dist // binsize + 1)
+
+    match method:
+        case "mean":
+            fun = np.nanmean
+        case "median":
+            fun = np.nanmedian
+        case "sum":
+            fun = np.nansum
+
+    diag_values = defaultdict(list)
+
+    for chrom in chroms:
+        # API cooler standard : retourne une sparse matrix directement
+        mat = clr.matrix(balance=weight_col is not None).fetch(chrom)
+        mat = csr_matrix(mat)
+        mat_n = mat.shape[0]
+
+        if mat_n == 0:
+            continue
+
+        chrom_n_diags = min(mat_n, n_diags)
+
+        for diag in range(chrom_n_diags):
+            diag_vals = mat.diagonal(diag)
+            diag_vals = diag_vals[np.isfinite(diag_vals) & (diag_vals > 0)]
+            if len(diag_vals) > 0:
+                diag_values[diag].extend(diag_vals.tolist())
+
+    ps = np.full(n_diags, np.nan)
+    for diag in range(n_diags):
+        if diag_values[diag]:
+            ps[diag] = fun(diag_values[diag])
+
+    if smooth and n_diags > 2:
+        ir = IsotonicRegression(increasing=False)
+        ps_smooth = ps.copy()
+        ps_smooth[~np.isfinite(ps_smooth)] = 0
+        ps = ir.fit_transform(range(n_diags), ps_smooth)
+
+    return ps
+
 def empty_queue_in_dict(queue, keys):
     """Empties a dict queue in a dict, using keys as the dict element key."""
     queue_dict = {}
@@ -482,3 +568,235 @@ def split_gff(gff_path, outpath = None):
     for file in chrom_files.values():
         file.close()
     return chrom_files_path
+
+
+### region mode methods
+
+def apply_padding(record, padding = 1.0):
+    """Computes the padding of a record and adds the "Padded_start" and "Padded_end" properties to the record object."""
+    if padding == None:
+        print(f"Error: no padding applied to {record}")
+        return record
+    
+    record_size = abs(record["End"] - record["Start"])
+    padding = math.floor(record_size * padding)
+
+    return record | {
+        "Size": record_size,
+        "Padded_start": (record["Start"] - padding),
+        "Padded_end": (record["End"] + padding),
+        "Padding": padding
+    }
+
+# extracting individual windows from the list of regions
+def extract_window_region(cool, region1, region2, is_loc_circ1 = False, is_loc_circ2 = False, raw = False):
+    """Extracts a submatrix of regions interaction zone from cool matrix.
+    If required, adds paddings. Takes into account chromosome circularity."""
+    matrix = cool.matrix(balance=(not raw))
+    binning = cool.binsize
+
+    if region1["Chromosome"] not in cool.chromsizes or region2["Chromosome"] not in cool.chromsizes:
+        return None
+    chrom_size1 = cool.chromsizes[region1["Chromosome"]]
+    chrom_size2 = cool.chromsizes[region2["Chromosome"]]
+    
+    start1 = adjust_locus(region1["Padded_start"], chrom_size1)
+    end1 = adjust_locus(region1["Padded_end"], chrom_size1)
+    start2 = adjust_locus(region2["Padded_start"], chrom_size2)
+    end2 = adjust_locus(region2["Padded_end"], chrom_size2)
+    
+    # 1. checking overflows
+    region1_overflow = start1 >= end1
+    region2_overflow = start2 >= end2
+
+    # 2. computing intervales: assures the original submatrix includes the region center
+    lower_overflow1 = chrom_size1 - start1 < end1
+    lower_overflow2 = chrom_size2 - start2 < end2
+    
+    lower_interval1 = f"{region1['Chromosome']}:{start1 if not region1_overflow else 0}-{end1}" 
+    higher_interval1 = f"{region1['Chromosome']}:{start1}-{end1 if not region1_overflow else chrom_size1}" 
+    pos1 = lower_interval1 if lower_overflow1 else higher_interval1
+    
+    lower_interval2 = f"{region2['Chromosome']}:{start2 if not region2_overflow else 0}-{end2}" 
+    higher_interval2 = f"{region2['Chromosome']}:{start2}-{end2 if not region2_overflow else chrom_size2}" 
+    pos2 = lower_interval2 if lower_overflow2 else higher_interval2
+
+    # 3. fetching main submatrix
+    submatrix = matrix.fetch(pos1, pos2)[:]
+    
+    if (not region1_overflow and not region2_overflow): # no overflow
+        return submatrix
+    
+    # 4. managing overflows:
+    bins1_to_fill = (chrom_size1 // binning - start1 // binning) + 1 if lower_overflow1 else end1 // binning + (1 if end1 % binning != 0 else 0)
+    bins2_to_fill = (chrom_size2 // binning - start2 // binning) + 1 if lower_overflow2 else end2 // binning + (1 if end2 % binning != 0 else 0)
+
+    if bins1_to_fill == 0 and bins2_to_fill == 0:
+        return submatrix
+        
+    if bins1_to_fill > 0:
+        fill1 = np.array([chrom_size1 - (bins1_to_fill * binning), chrom_size1]) if lower_overflow1 else np.array([0, end1])
+        fill1_pos = f"{region1['Chromosome']}:{fill1[0]}-{fill1[1]}"
+    
+    if bins2_to_fill > 0:
+        fill2 = np.array([chrom_size2 - (bins2_to_fill * binning), chrom_size2]) if lower_overflow2 else np.array([0, end2])
+        fill2_pos = f"{region2['Chromosome']}:{fill2[0]}-{fill2[1]}"
+        
+    mat1, mat2 = None, None
+    if bins2_to_fill > 0:
+        mat1 = matrix.fetch(pos1, fill2_pos) if is_loc_circ2 else np.full((submatrix.shape[0], bins2_to_fill), np.nan)
+            
+    if bins1_to_fill > 0:
+        mat2 = matrix.fetch(fill1_pos, pos2) if is_loc_circ1 else np.full((bins1_to_fill, submatrix.shape[1]), np.nan)
+        
+    # two dimensions to fill
+    if region1_overflow and region2_overflow:
+
+        mat3 = matrix.fetch(fill1_pos, fill2_pos) if is_loc_circ1 and is_loc_circ2 else np.full((bins1_to_fill, bins2_to_fill), np.nan)
+
+        concat1 = np.concatenate([mat1, submatrix], axis = 1) if lower_overflow2 else np.concatenate([submatrix, mat1], axis = 1)
+        concat2 = np.concatenate([mat3, mat2], axis = 1) if lower_overflow2 else np.concatenate([mat2, mat3], axis = 1)
+        submatrix = np.concatenate([concat2, concat1], axis = 0) if lower_overflow1 else np.concatenate([concat1, concat2], axis = 0)
+        
+    # dim1 to fill
+    elif region1_overflow:        
+        submatrix = np.concatenate([mat2, submatrix], axis = 0) if lower_overflow1 else np.concatenate([submatrix, mat2], axis = 0)
+        
+    # dim2 to fill
+    elif region2_overflow:
+        submatrix = np.concatenate([mat1, submatrix], axis = 1) if lower_overflow2 else np.concatenate([submatrix, mat1], axis = 1)
+ 
+    return submatrix
+
+def zoom_array(
+    in_array,
+    final_shape,
+    same_sum=False,
+    zoom_function=partial(zoom, order=1),
+    **zoom_kwargs
+):
+    """Rescale an array or image.
+
+    Normally, one can use scipy.ndimage.zoom to do array/image rescaling.
+    However, scipy.ndimage.zoom does not coarsegrain images well. It basically
+    takes nearest neighbor, rather than averaging all the pixels, when
+    coarsegraining arrays. This increases noise. Photoshop doesn't do that, and
+    performs some smart interpolation-averaging instead.
+
+    If you were to coarsegrain an array by an integer factor, e.g. 100x100 ->
+    25x25, you just need to do block-averaging, that's easy, and it reduces
+    noise. But what if you want to coarsegrain 100x100 -> 30x30?
+
+    Then my friend you are in trouble. But this function will help you. This
+    function will blow up your 100x100 array to a 120x120 array using
+    scipy.ndimage zoom Then it will coarsegrain a 120x120 array by
+    block-averaging in 4x4 chunks.
+
+    It will do it independently for each dimension, so if you want a 100x100
+    array to become a 60x120 array, it will blow up the first and the second
+    dimension to 120, and then block-average only the first dimension.
+
+    (Copied from mirnylib.numutils)
+
+    Parameters
+    ----------
+    in_array : ndarray
+        n-dimensional numpy array (1D also works)
+    final_shape : shape tuple
+        resulting shape of an array
+    same_sum : bool, optional
+        Preserve a sum of the array, rather than values. By default, values
+        are preserved
+    zoom_function : callable
+        By default, scipy.ndimage.zoom with order=1. You can plug your own.
+    **zoom_kwargs :
+        Options to pass to zoomFunction.
+
+    Returns
+    -------
+    rescaled : ndarray
+        Rescaled version of in_array
+
+    """
+    in_array = np.asarray(in_array, dtype=np.double)
+    in_shape = in_array.shape
+    assert len(in_shape) == len(final_shape)
+    mults = []  # multipliers for the final coarsegraining
+    for i in range(len(in_shape)):
+        if final_shape[i] < in_shape[i]:
+            mults.append(int(np.ceil(in_shape[i] / final_shape[i])))
+        else:
+            mults.append(1)
+    # shape to which to blow up
+    temp_shape = tuple([i * j for i, j in zip(final_shape, mults)])
+
+    # stupid zoom doesn't accept the final shape. Carefully crafting the
+    # multipliers to make sure that it will work.
+    zoom_multipliers = np.array(temp_shape) / np.array(in_shape) + 0.0000001
+    assert zoom_multipliers.min() >= 1
+
+    # applying scipy.ndimage.zoom
+    rescaled = zoom_function(in_array, zoom_multipliers, **zoom_kwargs)
+
+    for ind, mult in enumerate(mults):
+        if mult != 1:
+            sh = list(rescaled.shape)
+            assert sh[ind] % mult == 0
+            newshape = sh[:ind] + [sh[ind] // mult, mult] + sh[ind + 1 :]
+            rescaled.shape = newshape
+            rescaled = np.mean(rescaled, axis=ind + 1)
+    assert rescaled.shape == final_shape
+
+    if same_sum:
+        extra_size = np.prod(final_shape) / np.prod(in_shape)
+        rescaled /= extra_size
+    return rescaled
+
+def resize_window(submatrix, expected_size = 100):
+    """Resizes a submatrix to match the shape expected_size x expected_size."""
+    return zoom_array(submatrix, (expected_size, expected_size))
+
+def get_dist_to_diag_matrix(cool, region1, region2):
+    """Computes the index matrix to use for p(s) detrending and diagonal masking from regions."""
+    binning = cool.binsize
+    chrom1_bin = cool.chromsizes[region1["Chromosome"]] // binning
+    chrom2_bin = cool.chromsizes[region2["Chromosome"]] // binning
+    start1 = adjust_locus(region1["Padded_start"], cool.chromsizes[region1["Chromosome"]])
+    end1 = adjust_locus(region1["Padded_end"], cool.chromsizes[region1["Chromosome"]])
+    start2 = adjust_locus(region2["Padded_start"], cool.chromsizes[region2["Chromosome"]])
+    end2 = adjust_locus(region2["Padded_end"], cool.chromsizes[region2["Chromosome"]])
+
+    # Computing bin indices
+    start1 = start1 // binning
+    start2 = start2 // binning
+    end1 = end1 // binning if end1 % binning != 0 else (end1 - 1) // binning
+    end2 = end2 // binning if end2 % binning != 0 else (end2 - 1) // binning
+
+    # Computing matrix dimensions (accounting for circular overflow)
+    dim0 = end1 - start1 + 1 if start1 <= end1 else (chrom1_bin - start1) + end1 + 2
+    dim1 = end2 - start2 + 1 if start2 <= end2 else (chrom2_bin - start2) + end2 + 2
+
+    # Early return for inter-chromosomal
+    dist_array = np.empty((dim0, dim1))
+    if region1["Chromosome"] != region2["Chromosome"]:
+        return dist_array
+
+    # Filling the dist matrix with circular distance
+    for i in range(dim0):
+        bin_i = (start1 + i) % chrom1_bin
+        for j in range(dim1):
+            bin_j = (start2 + j) % chrom2_bin  # chrom1_bin == chrom2_bin here (same chrom)
+            diff = (bin_j - bin_i) % chrom1_bin
+            dist_array[i, j] = min(diff, chrom1_bin - diff)
+
+    return dist_array.astype(int)
+    
+def compute_chromosome_diag_mask(chromsize, diagonal_masking, binning, is_circular = False):
+    """Computes the diagonal mask for a given chromosome, accounting for circularity."""
+    diag_mask = np.ones(chromsize // binning + 1)
+    masking_bins = diagonal_masking // binning + 1
+    diag_mask[:masking_bins] = np.nan
+    if is_circular and masking_bins > 1:
+        diag_mask[-masking_bins + 1:] = np.nan
+    diag_mask = np.concatenate([diag_mask, diag_mask])
+    return diag_mask

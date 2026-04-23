@@ -10,7 +10,9 @@ pd.options.mode.chained_assignment = None
 np.seterr(all="ignore")
 
 # computation
+from collections import defaultdict
 from itertools import combinations
+from functools import partial
 import random
 import math
 
@@ -45,10 +47,11 @@ from BCBio import GFF
 import pyBigWig
 import cooler
 
-# scikit-learn
+# scikit-learn & scipy
 from sklearn.utils.sparsefuncs import _get_median as get_sparse_median
 from sklearn.isotonic import IsotonicRegression
 from scipy.sparse import csr_matrix
+from scipy.ndimage import zoom
 
 # constants
 ARROW_LEFT = "←"

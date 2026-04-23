@@ -1,4 +1,5 @@
 from hicue.imports import *
+from hicue.utils import apply_padding
 
 # global parameters
 global position_id
@@ -16,13 +17,15 @@ def initialize_globals():
 
 class ParserScheduler(threading.Thread):
     
-    def __init__(self, file_type, record_type, input_queue, output_queues, is_loop = False, no_pairing = False, **kwargs):
+    def __init__(self, file_type, record_type, input_queue, output_queues, is_loop = False, no_pairing = False, min_region_size = 0, padding = None, **kwargs):
         super(ParserScheduler, self).__init__(**kwargs)
 
         self._file_type = file_type
         self._record_type = record_type
         self._is_loop = is_loop
         self._no_pairing = no_pairing
+        self._min_region_size = min_region_size
+        self._padding = padding
         self._input_queue = input_queue
         self._output_queues = output_queues
 
@@ -30,7 +33,7 @@ class ParserScheduler(threading.Thread):
 
     def run(self):
         pairing_queue = self._output_queues[1] if not self._no_pairing else None
-        parser = Parser(self._file_type, self._record_type, self._output_queues[0], pairing_queue, is_loop = self._is_loop, no_pairing = self._no_pairing)
+        parser = Parser(self._file_type, self._record_type, self._output_queues[0], pairing_queue, is_loop = self._is_loop, no_pairing = self._no_pairing, min_region_size = self._min_region_size, padding = self._padding)
         while True:
             try:
                 val = self._input_queue.get(timeout = 10)
@@ -43,16 +46,17 @@ class ParserScheduler(threading.Thread):
                         
 
 class Parser():
-    def __init__(self, file_type, record_type, position_queue, pairing_queue, is_loop = False, no_pairing = False):
+    def __init__(self, file_type, record_type, position_queue, pairing_queue, is_loop = False, no_pairing = False, min_region_size = 0, padding = None):
         self._file_type = file_type
         self._position_queue = position_queue
         self._pairing_queue = pairing_queue
         self._record_type = record_type
         self._is_loop = is_loop
         self._no_pairing = no_pairing
+        self._min_region_size = min_region_size
+        self._padding = padding
 
-    @staticmethod
-    def parse_bed2d_line(line):
+    def parse_bed2d_line(self, line):
         """Parses a line from a BED2D formated file"""
         fields = line.split('\t')
 
@@ -61,7 +65,7 @@ class Parser():
             "Start": int(fields[1]) + 1, # adapting the base for cooler (1-based)
             "End": int(fields[2]) + 1, # adapting the base for cooler (1-based)
             "Name": fields[3] if len(fields) > 6 else None,
-            "Strand": -1 if len(fields) > 10 and fields[5] == '-' else 0
+            "Strand": -1 if len(fields) > 10 and fields[5] == '-' else 1 if len(fields) > 10 and fields[5] == '+' else 0
         }
         hash1 = f"{record1['Chromosome']},{record1['Start']},{record1['End']},{record1['Strand']}".encode("ascii")
 
@@ -72,14 +76,16 @@ class Parser():
             "Start": int(fields[k + 2]) + 1, # adapting the base for cooler (1-based)
             "End": int(fields[k + 3]) + 1, # adapting the base for cooler (1-based)
             "Name": fields[k + 4] if len(fields) > 6 else None,
-            "Strand": -1 if len(fields) > 10 and fields[k + 6] == '-' else 0
+            "Strand": -1 if len(fields) > 10 and fields[k + 6] == '-' else 1 if len(fields) > 10 and fields[k + 6] == '+' else 0
         }
         hash2 = f"{record2['Chromosome']},{record2['Start']},{record2['End']},{record2['Strand']}".encode("ascii")
         
+        if self._padding is not None:
+            return [apply_padding(record1, self._padding), apply_padding(record2, self._padding)], [hash1, hash2]
+
         return [record1, record2], [hash1, hash2]
 
-    @staticmethod
-    def parse_gff_line(line, record_type = "gene"):
+    def parse_gff_line(self, line, record_type = "gene"):
         """Parses a line from a GFF formated file"""
         fields = line.split('\t')
 
@@ -97,10 +103,12 @@ class Parser():
         }
         hash = f"{record['Chromosome']},{record['Start']},{record['End']},{record['Strand']}".encode("ascii")
 
+        if self._padding is not None:
+            return [apply_padding(record, self._padding)], [hash]
+
         return [record], [hash]
 
-    @staticmethod
-    def parse_bed_line(line):
+    def parse_bed_line(self, line):
         """Parses a line from a BED formated file"""
         fields = line.split('\t')
 
@@ -109,10 +117,12 @@ class Parser():
             "Start": int(fields[1]) + 1,
             "End": int(fields[2]) + 1,
             "Name": fields[3] if len(fields) > 3 else None,
-            "Strand": -1 if len(fields) > 5 and fields[5] == '-' else 0
+            "Strand": -1 if len(fields) > 5 and fields[5] == '-' else 1 if len(fields) > 5 and fields[5] == '+' else 0
         }
         hash = f"{record['Chromosome']},{record['Start']},{record['End']},{record['Strand']}".encode("ascii")
 
+        if self._padding is not None:
+            return [apply_padding(record, self._padding)], [hash]
 
         return [record], [hash]
 
@@ -129,6 +139,11 @@ class Parser():
                 if not value:
                     return 
                 line_positions, line_hashes = value
+
+        if self._min_region_size:
+            for record in line_positions:
+                if abs(record["Start"] - record["End"]) < self._min_region_size:
+                    return
 
         # retrieving positions indexes
         indexes = []

@@ -2,7 +2,7 @@ from hicue.utils import *
 
 class Reader():
     
-    def __init__(self, file, file_type, annotation_files={}, overlap = "strict", save_to="", loop = False, record_type = None):
+    def __init__(self, file, file_type, annotation_files={}, overlap = "strict", save_to="", loop = False, record_type = None, min_region_size = 0, padding = None):
         self._file = file
         self._file_type = file_type
         self._annotation_files = annotation_files
@@ -10,8 +10,10 @@ class Reader():
         self._save_to = save_to
         self._loop = loop
         self._record_type = record_type
+        self._min_region_size = min_region_size
+        self._padding = padding
 
-        if len(self._save_to) > 0: # TODO write all outputs with asynchronous functions
+        if len(self._save_to) > 0:
             if not os.path.exists(self._save_to):
                 os.mkdir(self._save_to)
     
@@ -39,7 +41,9 @@ class Reader():
                 output_queues = [position_queue, pairing_queue],
                 file_type = self._file_type,
                 record_type = self._record_type,
-                is_loop = self._loop
+                is_loop = self._loop,
+                min_region_size = self._min_region_size,
+                padding = self._padding
             )
         
         # launching anotator if required

@@ -189,7 +189,7 @@ class DisplayBatch(threading.Thread):
     # Batch management helpers
     # ------------------------------------------------------------------
 
-    def add_to_batch(self, window, sep_id, **params):
+    def add_to_batch(self, size_metric, sep_id, **params):
         """Register a new submatrix in the batch for ``(window, sep_id)``.
 
         If a key listed in *params_to_batch* is found in *params* and is not
@@ -198,8 +198,8 @@ class DisplayBatch(threading.Thread):
 
         Parameters
         ----------
-        window : int
-            Extraction window size in base-pairs.
+        size_metric : int
+            Extraction expected or window size in pixels or base-pairs respectively.
         sep_id : str
             Separation group identifier.
         **params
@@ -208,33 +208,33 @@ class DisplayBatch(threading.Thread):
         for param in self._params_to_batch:
             if param not in self._statics and param in params:
                 self._statics[param] = params[param]
-        key = f"{window}.{sep_id}"
+        key = f"{size_metric}.{sep_id}"
         if key not in self._current_batch:
             self._current_batch[key] = []
             self._nb_batch[key] = 1
             self._outfolders[key] = params["outfolder"]
-            self._keys.append((window, sep_id))
+            self._keys.append((size_metric, sep_id))
         self._current_batch[key].append(params)
 
-    def empty_batch(self, window, sep_id):
+    def empty_batch(self, size_metric, sep_id):
         """Clear accumulated items for ``(window, sep_id)`` after rendering.
 
         Parameters
         ----------
-        window : int
-            Extraction window size in base-pairs.
+        size_metric : int
+            Extraction expected or window size in pixels or base-pairs respectively.
         sep_id : str
             Separation group identifier.
         """
-        self._current_batch[f"{window}.{sep_id}"] = []
+        self._current_batch[f"{size_metric}.{sep_id}"] = []
 
-    def get_current_batch_size(self, window, sep_id):
+    def get_current_batch_size(self, size_metric, sep_id):
         """Return the number of items currently queued for ``(window, sep_id)``.
 
         Parameters
         ----------
-        window : int
-            Extraction window size in base-pairs.
+        size_metric : int
+            Extraction expected or window size in pixels or base-pairs respectively.
         sep_id : str
             Separation group identifier.
 
@@ -242,15 +242,15 @@ class DisplayBatch(threading.Thread):
         -------
         int
         """
-        return len(self._current_batch[f"{window}.{sep_id}"])
+        return len(self._current_batch[f"{size_metric}.{sep_id}"])
 
-    def is_empty_batch(self, window, sep_id):
+    def is_empty_batch(self, size_metric, sep_id):
         """Return ``True`` if there are no pending items for ``(window, sep_id)``.
 
         Parameters
         ----------
-        window : int
-            Extraction window size in base-pairs.
+        size_metric : int
+            Extraction expected or window size in pixels or base-pairs respectively.
         sep_id : str
             Separation group identifier.
 
@@ -258,23 +258,23 @@ class DisplayBatch(threading.Thread):
         -------
         bool
         """
-        return self.get_current_batch_size(window, sep_id) == 0
+        return self.get_current_batch_size(size_metric, sep_id) == 0
 
     # ------------------------------------------------------------------
     # Rendering
     # ------------------------------------------------------------------
 
-    def call_batch_display(self, window, sep_id):
-        """Render the current batch for ``(window, sep_id)`` and save it.
+    def call_batch_display(self, size_metric, sep_id):
+        """Render the current batch for ``(size_metric, sep_id)`` and save it.
 
         Parameters
         ----------
-        window : int
-            Extraction window size in base-pairs.
+        size_metric : int
+            Extraction expected or window size in pixels or base-pairs respectively.
         sep_id : str
             Separation group identifier.
         """
-        key = f"{window}.{sep_id}"
+        key = f"{size_metric}.{sep_id}"
         # Bug-fix: run_until_complete on the persistent loop avoids the
         # teardown/creation overhead and the plt.close() race condition.
         self._loop.run_until_complete(
@@ -283,7 +283,7 @@ class DisplayBatch(threading.Thread):
                 batch_size=self._batch_size,
                 outfolder=self._outfolders[key],
                 title=f"batch#{self._nb_batch[key]}",
-                window=window,
+                size_metric=size_metric,
                 **self._statics,
             )
         )
@@ -293,7 +293,7 @@ class DisplayBatch(threading.Thread):
     # ------------------------------------------------------------------
 
     def run(self):
-        """Consume queue items, accumulating them into batches by ``(window, sep_id)``.
+        """Consume queue items, accumulating them into batches by ``(window, sep_id)`` or ``(expected_size, sep_id)``.
 
         When a batch reaches *batch_size* it is rendered immediately.  After
         the ``"DONE"`` sentinel, any remaining non-empty partial batches are
@@ -309,18 +309,19 @@ class DisplayBatch(threading.Thread):
             if value == "DONE":
                 break
 
-            window = value["window"]
+            size_metric = value["size_metric"]
+
             sep_id = value["pair"]["Sep_id"]
             self.add_to_batch(**value, sep_id=sep_id)
-            if self.get_current_batch_size(window, sep_id) == self._batch_size:
-                self.call_batch_display(window, sep_id)
-                self.empty_batch(window, sep_id)
-                self._nb_batch[f"{window}.{sep_id}"] += 1
+            if self.get_current_batch_size(size_metric, sep_id) == self._batch_size:
+                self.call_batch_display(size_metric, sep_id)
+                self.empty_batch(size_metric, sep_id)
+                self._nb_batch[f"{size_metric}.{sep_id}"] += 1
 
         # Flush partial batches that never reached batch_size.
-        for window, sep_id in self._keys:
-            if not self.is_empty_batch(window, sep_id):
-                self.call_batch_display(window, sep_id)
+        for size_metric, sep_id in self._keys:
+            if not self.is_empty_batch(size_metric, sep_id):
+                self.call_batch_display(size_metric, sep_id)
 
     def join(self, timeout=None):
         """Join the thread and release the event loop.
