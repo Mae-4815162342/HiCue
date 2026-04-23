@@ -23,6 +23,7 @@ import hicue.hicue as h
 @click.option('--random_path', type=str, default=None, help="Path to previously generated random positions file. If provided, the random positions and pairs for the patch detrending are extracted from the files and not re-calculated. random_path must be formated as such: [folder_path]/[prefix]. HiCue will expect two files: {random_path}_random_positions.csv and {random_path}_random_pairs.csv.")
 @click.option('--format', type=STR_LIST, default="pdf", help="Figures saving formats. Default value: pdf")
 @click.option('--circulars', type=STR_LIST, default="none", help="Coma-separated list of the chromosomes to treat as circular. By default, chromosomes are not considered circular.")
+@click.option('--ps_all_chrom', default=True, help="Computes the P(s) used for detrending from all the chromosomes cis contacts and not for each separately. Default value: True.")
 @click.option('--loops', is_flag=True, help="Centers the sub-matrices on pairs of positions instead of single position.")
 @click.option('--trans', is_flag=True, help="Enables trans-chromosomal contacts in extracted sub-matrices when in --loops option.")
 @click.option('--min_dist', type=int, default="30000", help="Minimal distance in bp between two positions before the pair is used in the --loops option. Default value: 30000.")

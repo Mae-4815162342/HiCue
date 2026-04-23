@@ -400,9 +400,10 @@ def regions(cool_files, positions, outpath, log = None, **params):
                                                resizing = params["expected_sizes"],
                                                padding = params['padding'],
                                                extract_regions = True,
+                                               ps_on_all = params["ps_all_chrom"],
                                                log = log)
     
-    pileups = matrix_extractor.launch_extraction(positions, formated_pairs, threads=threads) #TODO: here add the multi-sized extraction
+    pileups = matrix_extractor.launch_extraction(positions, formated_pairs, threads=threads)
 
     if params["pileup"]:
         pileups_random = {}

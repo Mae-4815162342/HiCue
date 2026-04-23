@@ -771,7 +771,7 @@ async def display_batch_submatrices(
             )
             ax_mat = plt.subplot(subgs[0, 0])
             if is_region:
-                plot_map_region(ax, submatrix, pos1, pos2, padding, 
+                plot_map_region(ax_mat, submatrix, pos1, pos2, padding, 
                             is_contact=is_contact,
                             title=map_title, display_sense=display_sense,
                             display_strand=display_strand, flipped=flipped,
@@ -1090,8 +1090,14 @@ async def display_pileup(
 
         if len(outpath) > 0:
             for fmt in output_format:
+                pileup_name = f"pileup_{size_metric // 1000}kb_window.{fmt}" if not is_region else f"pileup_{size_metric}px.{fmt}"
                 plt.savefig(
-                    outfolder + f"/pileup_{size_metric // 1000}kb_window.{fmt}" if not is_region else outfolder + f"/pileup_{size_metric}px.{fmt}",
+                    outfolder + "/" + pileup_name,
+                    bbox_inches="tight",
+                )
+                # copy at the outpath for easier user access
+                plt.savefig(
+                    f"{outpath}/{pileup.get_cool_name()}_{sep_id}_binning_{pileup.get_binning()}_{pileup_name}",
                     bbox_inches="tight",
                 )
         plt.close()

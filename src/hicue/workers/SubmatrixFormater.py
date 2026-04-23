@@ -63,7 +63,7 @@ class SubmatrixFormaterScheduler(threading.Thread):
 
 class SubmatrixFormater():
     """Class for submatrix formating (detrending, flipping, masking, ...)"""
-    def __init__(self, cool_file, cool_name, positions, flip = False, center = "start", method = "median", raw = False, log = None):
+    def __init__(self, cool_file, cool_name, positions, flip = False, center = "start", method = "median", raw = False, ps_on_all = True, log = None):
         self._cool_file = cool_file
         self._cool_name = cool_name
         self._binning = cool_file.binsize
@@ -72,25 +72,31 @@ class SubmatrixFormater():
         self._center = center
         self._method = method
         self._raw = raw
+        self._ps_on_all = ps_on_all
         self._log = log
 
     def get_ps(self, chromosome, is_circular = False, raw = False):
         """Computes or retrieve ps for the chromosomes"""
         ps = None
+        chromosome = "All chromsomes" if self._ps_on_all else chromosome
         with ps_lock:
             global chrom_ps
             if chromosome in chrom_ps:
                 ps = chrom_ps[chromosome]
             else:
                 start_time = time.time()
-                try:
-                    chrom_matrix = self._cool_file.matrix(balance = (not raw)).fetch(chromosome)
-                except:
-                    chrom_matrix = csr_matrix(self._cool_file.matrix(balance = (not raw), sparse = True).fetch(chromosome))
-                finally:
-                    chrom_matrix = np.concatenate([np.concatenate([chrom_matrix, chrom_matrix], axis = 0), np.concatenate([chrom_matrix, chrom_matrix], axis = 0)], axis = 1) if is_circular else chrom_matrix
-                    ps = distance_law(chrom_matrix, method = self._method)
+                if self._ps_on_all:
+                    ps = distance_law_genome(self._cool_file, method = self._method)
                     ps = np.concatenate([ps, [np.nan for _ in range(len(ps))]]) if not is_circular else ps
+                else:
+                    try:
+                        chrom_matrix = self._cool_file.matrix(balance = (not raw)).fetch(chromosome)
+                    except:
+                        chrom_matrix = csr_matrix(self._cool_file.matrix(balance = (not raw), sparse = True).fetch(chromosome))
+                    finally:
+                        chrom_matrix = np.concatenate([np.concatenate([chrom_matrix, chrom_matrix], axis = 0), np.concatenate([chrom_matrix, chrom_matrix], axis = 0)], axis = 1) if is_circular else chrom_matrix
+                        ps = distance_law(chrom_matrix, method = self._method)
+                        ps = np.concatenate([ps, [np.nan for _ in range(len(ps))]]) if not is_circular else ps
                 if self._log is not None:
                     self._log.write(f"Distance law for chromosome {chromosome} computed in {time.time() - start_time} seconds\n")
                 chrom_ps[chromosome] = ps
@@ -195,6 +201,7 @@ class SubmatrixFormater():
                         result_matrix = result_matrix / ps[dist_matrix]
                     else:
                         result_matrix = result_matrix / self.get_trans_av(locus1["Chromosome"], locus2["Chromosome"])
+            result_matrix = resize_window(result_matrix, expected_size = expected_size)
 
         else:
             # masking

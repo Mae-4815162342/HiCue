@@ -10,6 +10,7 @@ pd.options.mode.chained_assignment = None
 np.seterr(all="ignore")
 
 # computation
+from collections import defaultdict
 from itertools import combinations
 from functools import partial
 import random

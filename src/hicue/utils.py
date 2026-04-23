@@ -416,6 +416,60 @@ def distance_law(
 
     return dist
 
+def distance_law_genome(clr, max_dist=None, smooth=True, method="mean", weight_col="weight"):
+    
+    binsize = clr.binsize
+    chroms = clr.chromnames
+    
+    global_max_bins = max(
+        clr.extent(chrom)[1] - clr.extent(chrom)[0] for chrom in chroms
+    )
+    
+    if max_dist is None:
+        n_diags = global_max_bins
+    else:
+        n_diags = min(global_max_bins, max_dist // binsize + 1)
+
+    match method:
+        case "mean":
+            fun = np.nanmean
+        case "median":
+            fun = np.nanmedian
+        case "sum":
+            fun = np.nansum
+
+    diag_values = defaultdict(list)
+
+    for chrom in chroms:
+        # API cooler standard : retourne une sparse matrix directement
+        mat = clr.matrix(balance=weight_col is not None).fetch(chrom)
+        mat = csr_matrix(mat)
+        mat_n = mat.shape[0]
+
+        if mat_n == 0:
+            continue
+
+        chrom_n_diags = min(mat_n, n_diags)
+
+        for diag in range(chrom_n_diags):
+            diag_vals = mat.diagonal(diag)
+            diag_vals = diag_vals[np.isfinite(diag_vals) & (diag_vals > 0)]
+            if len(diag_vals) > 0:
+                diag_values[diag].extend(diag_vals.tolist())
+
+    ps = np.full(n_diags, np.nan)
+    for diag in range(n_diags):
+        if diag_values[diag]:
+            ps[diag] = fun(diag_values[diag])
+
+    if smooth and n_diags > 2:
+        ir = IsotonicRegression(increasing=False)
+        ps_smooth = ps.copy()
+        ps_smooth[~np.isfinite(ps_smooth)] = 0
+        ps = ir.fit_transform(range(n_diags), ps_smooth)
+
+    return ps
+
 def empty_queue_in_dict(queue, keys):
     """Empties a dict queue in a dict, using keys as the dict element key."""
     queue_dict = {}

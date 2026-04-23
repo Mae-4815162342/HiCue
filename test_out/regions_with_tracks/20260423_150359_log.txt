@@ -1,0 +1,49 @@
+Regions mode.
+Executing command: hicue regions test_out/regions_with_tracks test_data/positions/plants_loops.bed test_data/matrices/Endive4_2025.mcool::resolutions/5000 --tracks test_data/tracks/Endive4_2025.bw --loops --min_region_size 5000 --padding 1.0 --batch --no-display_log --format png,pdf --save_tmp --detrending none -e 20,51 --circulars NC_014500.1
+Extracting from ['test_data/matrices/Endive4_2025.mcool::resolutions/5000']
+                positions file: ('bed', 'test_data/positions/plants_loops.bed')
+                outpath: test_out/regions_with_tracks
+        
+Options:
+        tracks = test_data/tracks/Endive4_2025.bw
+        loops = True
+        min_region_size = 5000
+        padding = 1.0
+        batch = True
+        display_log = False
+        format = ['png', 'pdf']
+        save_tmp = True
+        detrending = none
+        expected_sizes = [20, 51]
+        circulars = ['NC_014500.1']
+        gff = None
+        binnings = [1000]
+        windows = [30000]
+        method = median
+        flip = False
+        raw = False
+        threads = 8
+        track_unit = 
+        nb_pos = 2
+        rand_max_dist = 100000
+        random_jitter = 0
+        random_path = None
+        ps_all_chrom = True
+        trans = False
+        min_dist = 30000
+        diag_mask = 0
+        pileup = True
+        loci = False
+        display_strand = False
+        cmap_limits = None
+        indiv_cmap_limits = None
+        cmap_color = seismic
+        indiv_cmap_color = afmhot_r
+        display_sense = forward
+        center = start
+        overlap = strict
+        separate_by = None
+        separation_regions = None
+        contact_range = None
+        record_type = None
+Total time: 1.9926817417144775 seconds (0.033211362361907956 min)

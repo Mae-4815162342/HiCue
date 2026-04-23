@@ -1,0 +1,49 @@
+Tracks mode.
+Executing command: hicue tracks test_out/tracks_test test_data/tracks/WT.bw test_data/matrices/Control.mcool::resolutions/1000 --circulars NC_014500.1 --windows 50000 --detrending patch --nb_pos 1 --flip -t min 1500 --batch --loops --save_tmp --display_strand
+Extracting from ['test_data/matrices/Control.mcool::resolutions/1000']
+                tracks file: test_data/tracks/WT.bw
+                outpath: test_out/tracks_test
+        
+Options:
+        circulars = ['NC_014500.1']
+        windows = [50000]
+        detrending = patch
+        nb_pos = 1
+        flip = True
+        threshold = ('min', 1500.0)
+        batch = True
+        loops = True
+        save_tmp = True
+        display_strand = True
+        percentage = None
+        positions = None
+        gff_type = 
+        track_unit = 
+        binnings = [1000]
+        method = median
+        raw = False
+        threads = 8
+        rand_max_dist = 100000
+        random_jitter = 0
+        random_path = None
+        format = ['pdf']
+        ps_all_chrom = True
+        trans = False
+        min_sep = 1000
+        min_dist = 30000
+        diag_mask = 0
+        pileup = True
+        loci = False
+        cmap_limits = None
+        indiv_cmap_limits = None
+        cmap_color = seismic
+        indiv_cmap_color = afmhot_r
+        display_sense = forward
+        center = start
+        overlap = strict
+        separate_by = None
+        separation_regions = None
+        contact_range = None
+        record_type = gene
+Generating random positions for patch detrending.
+Total time: 17.136039972305298 seconds (0.2856006662050883 min)
