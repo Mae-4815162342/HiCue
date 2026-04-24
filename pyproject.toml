@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hicue"
-version = "0.4.2"
+version = "0.5.0"
 authors = [
   { name="Maelys Delouis", email="maelys.delouis@pasteur.fr" },
 ]
@@ -94,10 +94,11 @@ packages = ["src/hicue"]
 
 [tool.hatch.build]
 exclude = [
-    "tests_data/",
+    "test_data/",
     "tests/",
     ".coverage",
     "htmlcov/",
     "*.ipynb",
     ".ipynb_checkpoints/",
+    "*.mcool",
 ]

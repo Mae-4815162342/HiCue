@@ -4,7 +4,7 @@ from click.testing import CliRunner
 
 from hicue.cli.extract import extract
 from hicue.cli.tracks import tracks
-from hicue.cli.compare import compare
+#from hicue.cli.compare import compare
 
 
 def test_hicue_extract():
