@@ -72,3 +72,6 @@ Thumbs.db
 */__pycache__
 
 # heavy test files
+test_out
+test_data/regions/MP275^mapped_S288c_40kb1^MJ9TDO.mcool
+*.ipynb
